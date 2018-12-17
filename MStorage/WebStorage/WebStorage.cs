@@ -21,7 +21,7 @@ namespace MStorage.WebStorage
             this.user = user;
             this.apiKey = apiKey;
             this.bucket = bucket;
-            this.log = log ?? new Logger<WebStorage>(new Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory());
+            this.log = log ?? new Microsoft.Extensions.Logging.Abstractions.NullLogger<WebStorage>();
         }
 
         public abstract Task<IEnumerable<string>> ListAsync();

@@ -20,10 +20,10 @@ namespace MStorage.FilesystemStorage
         public FilesystemStorage(string rootDirectory, ILogger log)
         {
             RootDirectory = rootDirectory;
-            this.log = log ?? new Logger<FilesystemStorage>(new Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory());
+            this.log = log ?? new Microsoft.Extensions.Logging.Abstractions.NullLogger<FilesystemStorage>();
 
             Directory.CreateDirectory(RootDirectory);
-            log.LogInformation($"Filesystem storage backend initialized to root directory {RootDirectory}.");
+            this.log.LogInformation($"Filesystem storage backend initialized to root directory {RootDirectory}.");
         }
 
         public Task DeleteAllAsync()
@@ -88,7 +88,7 @@ namespace MStorage.FilesystemStorage
 
         public async Task UploadAsync(string name, Stream file)
         {
-            using (var fileStream = File.OpenWrite(GetFullPath(name)))
+            using (var fileStream = File.Open(GetFullPath(name), FileMode.Create))
             {
                 await file.CopyToAsync(fileStream);
             }
