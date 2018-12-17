@@ -8,14 +8,13 @@ using System.Collections.Generic;
 namespace MStorageTests
 {
     [TestClass]
-    public class FilesystemTests
+    public class AwsTests
     {
         private const string testString = "Hello, world!";
-        const string rootName = "A";
 
         private static IStorage GenerateBackend()
         {
-            return new MStorage.FilesystemStorage.FilesystemStorage(Path.Join(Environment.CurrentDirectory, rootName), null);
+            return new MStorage.WebStorage.S3Storage(AwsConnectionInfo.accessKey, AwsConnectionInfo.apiKey, AwsConnectionInfo.endpoint, AwsConnectionInfo.bucket, null);
         }
 
         [TestMethod]

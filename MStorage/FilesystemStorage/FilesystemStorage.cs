@@ -90,7 +90,7 @@ namespace MStorage.FilesystemStorage
         {
             using (var fileStream = File.Open(GetFullPath(name), FileMode.Create))
             {
-                await file.CopyToAsync(fileStream);
+                await file.CopyToAsync(fileStream).ContinueWith((x) => { file.Close(); });
             }
         }
 

@@ -18,7 +18,7 @@ namespace MStorage.WebStorage
         public S3Storage(string accessKey, string apiKey, RegionEndpoint endpoint, string bucket, ILogger log) : base(accessKey, apiKey, bucket, log)
         {
             client = new Amazon.S3.AmazonS3Client(accessKey, apiKey, endpoint);
-            log.LogInformation($"AmazonS3 storage backend initialized to bucket {bucket}.");
+            base.log.LogInformation($"AmazonS3 storage backend initialized to bucket {bucket}.");
         }
 
         public override async Task DeleteAsync(string name)

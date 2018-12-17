@@ -12,17 +12,18 @@ using System.Threading;
 
 namespace MStorage.WebStorage
 {
-    class AzureStorage : WebStorage, IStorage
+    public class AzureStorage : WebStorage, IStorage
     {
         private readonly CloudBlobClient client;
         private readonly CloudBlobContainer container;
 
-        public AzureStorage(string account, string sasKey, string container, ILogger log) : base(account, sasKey, container, log)
+        public AzureStorage(string account, string sasToken, string container, ILogger log) : base(account, sasToken, container, log)
         {
-            StorageCredentials sasCredentials = new StorageCredentials(sasKey);
+            StorageCredentials sasCredentials = new StorageCredentials(sasToken);
             CloudStorageAccount sasAccount = new CloudStorageAccount(sasCredentials, account, null, true);
             client = sasAccount.CreateCloudBlobClient();
-            this.container = client.GetContainerReference(bucket);
+            this.container = client.GetContainerReference(container);
+            base.log.LogInformation($"Azure storage backend initialized to account {account}.");
         }
 
         /// <summary>
@@ -32,7 +33,7 @@ namespace MStorage.WebStorage
         public override async Task UploadAsync(string name, Stream file)
         {
             var newBlob = container.GetBlockBlobReference(name);
-            await newBlob.UploadFromStreamAsync(file);
+            await newBlob.UploadFromStreamAsync(file).ContinueWith((x) => { file.Close(); });
         }
 
         /// <summary>
@@ -41,6 +42,10 @@ namespace MStorage.WebStorage
         public override async Task<Stream> DownloadAsync(string name)
         {
             var blob = container.GetBlobReference(name);
+            if (await blob.ExistsAsync() == false)
+            {
+                throw new FileNotFoundException();
+            }
             return await blob.OpenReadAsync();
         }
 
@@ -56,7 +61,13 @@ namespace MStorage.WebStorage
             {
                 var response = container.ListBlobsSegmentedAsync(continuationToken);
                 continuationToken = response.Result.ContinuationToken;
-                results.AddRange(response.Result.Results.Select(x => x.ToString()));
+                results.AddRange(response.Result.Results.Select(x => {
+                    if (x is CloudBlockBlob y)
+                    {
+                        return y.Name;
+                    }
+                    return x.StorageUri.PrimaryUri.Segments.Last();
+                }));
             }
             while (continuationToken != null);
             return Task.FromResult<IEnumerable<string>>(results);

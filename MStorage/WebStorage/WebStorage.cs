@@ -10,7 +10,7 @@ namespace MStorage.WebStorage
 {
     public abstract class WebStorage : IStorage
     {
-        private readonly ILogger log;
+        protected readonly ILogger log;
 
         protected readonly string user;
         protected readonly string apiKey;

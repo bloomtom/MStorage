@@ -25,7 +25,7 @@ namespace MStorageTests
             Assert.AreEqual(fileBody, Helper.ReadStream(s.DownloadAsync(filename).Result));
 
             // Delete the file
-            s.DeleteAsync(filename);
+            s.DeleteAsync(filename).Wait();
 
             // Make sure it's gone.
             Assert.IsFalse(s.ListAsync().Result.Contains(filename));
@@ -37,7 +37,11 @@ namespace MStorageTests
             using (Stream f = Helper.GenerateStream(fileBody))
             {
                 s.UploadAsync(filename, f).Wait();
-                f.Position = 0;
+                Assert.ThrowsException<ObjectDisposedException>(() => f.Position = 0); // Extra test: Stream expected to be closed.
+            }
+            // Upload again.
+            using (Stream f = Helper.GenerateStream(fileBody))
+            {
                 s.UploadAsync(filename, f).Wait();
             }
 
@@ -48,7 +52,7 @@ namespace MStorageTests
             Assert.AreEqual(fileBody, Helper.ReadStream(s.DownloadAsync(filename).Result));
 
             // Clean up.
-            s.DeleteAsync(filename);
+            s.DeleteAsync(filename).Wait();
             Assert.IsFalse(s.ListAsync().Result.Contains(filename));
         }
 
@@ -71,8 +75,32 @@ namespace MStorageTests
             Assert.AreEqual(fileBodyB, Helper.ReadStream(s.DownloadAsync(filename).Result));
 
             // Clean up.
-            s.DeleteAsync(filename);
+            s.DeleteAsync(filename).Wait();
             Assert.IsFalse(s.ListAsync().Result.Contains(filename));
+        }
+
+        public static void TestDownloadNonexistent(IStorage s)
+        {
+            try
+            {
+                s.DownloadAsync("donotcreate-" + DateTime.Now.Ticks).Wait();
+            }
+            catch (FileNotFoundException)
+            {
+                return;
+            }
+            catch (AggregateException ex)
+            {
+                if (ex.InnerExceptions[0].GetType() == typeof(FileNotFoundException))
+                {
+                    return;
+                }
+            }
+            catch(Exception ex)
+            {
+                Assert.Fail("Expected FileNotFoundException but got " + ex.ToString());
+            }
+            Assert.Fail("Expected FileNotFoundException but no exception was thrown.");
         }
     }
 }

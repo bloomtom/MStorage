@@ -8,14 +8,13 @@ using System.Collections.Generic;
 namespace MStorageTests
 {
     [TestClass]
-    public class FilesystemTests
+    public class AzureTests
     {
         private const string testString = "Hello, world!";
-        const string rootName = "A";
 
         private static IStorage GenerateBackend()
         {
-            return new MStorage.FilesystemStorage.FilesystemStorage(Path.Join(Environment.CurrentDirectory, rootName), null);
+            return new MStorage.WebStorage.AzureStorage(AzureConnectionInfo.accountName, AzureConnectionInfo.sasToken, AzureConnectionInfo.container, null);
         }
 
         [TestMethod]
