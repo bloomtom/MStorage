@@ -19,9 +19,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.S3" Version="3.3.30" />
-    <PackageReference Include="bloomtom.BunAPI" Version="1.1.5" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="2.1.1" />
+    <PackageReference Include="AWSSDK.S3" Version="3.3.31.3" />
+    <PackageReference Include="bloomtom.BunAPI" Version="2.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="2.2.0" />
     <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
   </ItemGroup>
 
