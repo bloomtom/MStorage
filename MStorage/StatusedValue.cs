@@ -13,11 +13,13 @@ namespace MStorage
     {
         public T Value { get; private set; }
         public bool Success { get; private set; }
+        public Exception Exception { get; private set; }
 
-        public StatusedValue(bool success, T value)
+        public StatusedValue(T value, bool success, Exception ex)
         {
             Success = success;
             Value = value;
+            Exception = ex;
         }
 
         #region IDisposable Support

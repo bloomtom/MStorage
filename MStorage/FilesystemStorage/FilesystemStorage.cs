@@ -8,29 +8,27 @@ using System.Threading.Tasks;
 
 namespace MStorage.FilesystemStorage
 {
+    /// <summary>
+    /// A filesystem based backend. Objects are stored as normal files on disk.
+    /// </summary>
     public class FilesystemStorage : IStorage
     {
-        private readonly ILogger log;
-
         /// <summary>
         /// The root directory on the filesystem to store data in.
         /// </summary>
         public string RootDirectory { get; private set; }
 
-        public FilesystemStorage(string rootDirectory, ILogger log)
+        public FilesystemStorage(string rootDirectory)
         {
             RootDirectory = rootDirectory;
-            this.log = log ?? new Microsoft.Extensions.Logging.Abstractions.NullLogger<FilesystemStorage>();
-
             Directory.CreateDirectory(RootDirectory);
-            this.log.LogInformation($"Filesystem storage backend initialized to root directory {RootDirectory}.");
         }
 
         public Task DeleteAllAsync()
         {
             try
             {
-                Directory.Delete(RootDirectory);
+                Directory.Delete(RootDirectory, true);
             }
             finally
             {
@@ -63,7 +61,6 @@ namespace MStorage.FilesystemStorage
             if (Equals(destination))
             {
                 // Target is same as source. Nothing to do.
-                log.LogInformation($"Filesystem transfer was attempted but the source and destination are the same.");
                 return Enumerable.Empty<StatusedValue<string>>();
             }
 
@@ -72,25 +69,37 @@ namespace MStorage.FilesystemStorage
             {
                 try
                 {
-                    using (var fileStream = File.OpenRead(GetFullPath(filename)))
+                    string fullPath = GetFullPath(filename);
+                    using (var fileStream = File.OpenRead(fullPath))
                     {
                         await destination.UploadAsync(filename, fileStream);
-                        result.Add(new StatusedValue<string>(true, filename));
                     }
+                    if (deleteSource)
+                    {
+                        File.Delete(fullPath);
+                    }
+                    result.Add(new StatusedValue<string>(filename, true, null));
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    result.Add(new StatusedValue<string>(false, filename));
+                    result.Add(new StatusedValue<string>(filename, false, ex));
                 }
             }
             return result;
         }
 
-        public async Task UploadAsync(string name, Stream file)
+        public async Task UploadAsync(string name, Stream file, bool disposeStream)
         {
-            using (var fileStream = File.Open(GetFullPath(name), FileMode.Create))
+            try
             {
-                await file.CopyToAsync(fileStream).ContinueWith((x) => { file.Close(); });
+                using (var fileStream = File.Open(GetFullPath(name), FileMode.Create))
+                {
+                    await file.CopyToAsync(fileStream);
+                }
+            }
+            finally
+            {
+                if (disposeStream) { file.Dispose(); }
             }
         }
 

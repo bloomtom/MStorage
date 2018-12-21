@@ -7,26 +7,41 @@ using System.Threading.Tasks;
 
 namespace MStorage
 {
+    /// <summary>
+    /// A null storage backend. Simulates all aspects of a normal storage backend without actually storing object data.
+    /// </summary>
     public class NullStorage : IStorage
     {
-        private readonly ILogger log;
         private readonly Dictionary<string, long> stored = new Dictionary<string, long>();
 
-        public NullStorage(ILogger log)
+        public NullStorage()
         {
-            this.log = log;
-            log.LogInformation("Null storage backend initialized. This backend is normally used for testing only.");
         }
 
+        /// <summary>
+        /// Clears the virtual object store.
+        /// </summary>
         public Task DeleteAllAsync()
         {
             stored.Clear();
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
         public Task DeleteAsync(string name)
         {
-            stored.Remove(name);
+            if (stored.ContainsKey(name))
+            {
+                stored.Remove(name);
+            }
+            else
+            {
+                throw new FileNotFoundException();
+            }
             return Task.CompletedTask;
         }
 
@@ -34,9 +49,12 @@ namespace MStorage
         {
             if (stored.TryGetValue(name, out long length))
             {
-                new MemoryStream(new byte[length]);
+                return Task.FromResult((Stream)new MemoryStream(new byte[length]));
             }
-            return null;
+            else
+            {
+                throw new FileNotFoundException();
+            }
         }
 
         public Task<IEnumerable<string>> ListAsync()
@@ -49,24 +67,49 @@ namespace MStorage
             var result = new List<StatusedValue<string>>();
             foreach (var item in stored)
             {
-                result.Add(new StatusedValue<string>(true, item.Key));
+                try
+                {
+                    using (var s = new MemoryStream(new byte[item.Value]))
+                    {
+                        s.Position = 0;
+                        destination.UploadAsync(item.Key, s).Wait();
+                    }
+
+                    result.Add(new StatusedValue<string>(item.Key, true, null));
+                }
+                catch (Exception ex)
+                {
+                    result.Add(new StatusedValue<string>(item.Key, false, ex));
+                }
             }
+
             if (deleteSource)
             {
-                stored.Clear();
+                foreach (var item in result)
+                {
+                    stored.Remove(item.Value);
+                }
             }
+
             return Task.FromResult<IEnumerable<StatusedValue<string>>>(result);
         }
 
-        public Task UploadAsync(string name, Stream file)
+        public Task UploadAsync(string name, Stream file, bool autoDispose = false)
         {
-            long length = 0;
-            while(file.ReadByte() != -1)
+            try
             {
-                length++;
+                long length = 0;
+                while (file.ReadByte() != -1)
+                {
+                    length++;
+                }
+                stored[name] = length;
+                return Task.CompletedTask;
             }
-            stored[name] = length;
-            return Task.CompletedTask;
+            finally
+            {
+                if (autoDispose) { file.Dispose(); }
+            }
         }
 
         public Task UploadAsync(string name, string path, bool deleteSource)

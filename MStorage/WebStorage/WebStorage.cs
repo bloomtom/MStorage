@@ -10,32 +10,29 @@ namespace MStorage.WebStorage
 {
     public abstract class WebStorage : IStorage
     {
-        protected readonly ILogger log;
-
         protected readonly string user;
         protected readonly string apiKey;
         protected readonly string bucket;
 
-        public WebStorage(string user, string apiKey, string bucket, ILogger log)
+        public WebStorage(string user, string apiKey, string bucket)
         {
             this.user = user;
             this.apiKey = apiKey;
             this.bucket = bucket;
-            this.log = log ?? new Microsoft.Extensions.Logging.Abstractions.NullLogger<WebStorage>();
         }
 
         public abstract Task<IEnumerable<string>> ListAsync();
 
         public abstract Task<Stream> DownloadAsync(string name);
 
-        public abstract Task UploadAsync(string name, Stream file);
+        public abstract Task UploadAsync(string name, Stream file, bool disposeStream = false);
 
         public virtual async Task UploadAsync(string name, string path, bool deleteSource)
         {
             if (!File.Exists(path)) { throw new ArgumentOutOfRangeException("path", $"No file exists at the given path {path}"); }
             using (var s = File.OpenRead(path))
             {
-                await UploadAsync(name, s);
+                await UploadAsync(name, s, false);
             }
             if (deleteSource)
             {
@@ -61,7 +58,6 @@ namespace MStorage.WebStorage
             if (Equals(destination))
             {
                 // Target is same as source. Nothing to do.
-                log.LogInformation($"Web storage transfer was attempted but the source and destination are the same.");
                 return Enumerable.Empty<StatusedValue<string>>();
             }
 
@@ -69,22 +65,21 @@ namespace MStorage.WebStorage
             var items = await ListAsync();
             foreach (var item in items)
             {
-                bool localSuccess = false;
                 try
                 {
                     using (var s = await DownloadAsync(item))
                     {
-                        await destination.UploadAsync(item, s);
-                        localSuccess = true;
+                        await destination.UploadAsync(item, s, false);
                     }
                 }
                 catch (Exception ex)
                 {
-                    log.LogWarning($"Failed to transfer {item}. Ex: {ex.Message}");
+                    returnList.Add(new StatusedValue<string>(item, false, ex));
+                    continue;
                 }
 
                 // Delete the old file if it was transfered, and deletion was requested.
-                if (localSuccess && deleteSource)
+                if (deleteSource)
                 {
                     try
                     {
@@ -92,11 +87,12 @@ namespace MStorage.WebStorage
                     }
                     catch (Exception ex)
                     {
-                        log.LogWarning($"Failed to delete {item} during transfer. Ex: {ex.Message}");
+                        returnList.Add(new StatusedValue<string>(item, false, ex));
+                        continue;
                     }
                 }
 
-                returnList.Add(new StatusedValue<string>(localSuccess, item));
+                returnList.Add(new StatusedValue<string>(item, true, null));
             }
 
             return returnList;

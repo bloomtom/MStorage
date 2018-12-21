@@ -16,10 +16,9 @@ namespace MStorage.WebStorage
     {
         BunClient client;
 
-        public BunnyStorage(string apiKey, string storageZone, ILogger log) : base(apiKey, apiKey, storageZone, log)
+        public BunnyStorage(string apiKey, string storageZone) : base(apiKey, apiKey, storageZone)
         {
             client = new BunClient(apiKey, storageZone);
-            base.log.LogInformation($"BunnyCDN storage backend initialized to storage zone {storageZone}.");
         }
 
         public override async Task DeleteAsync(string name)
@@ -41,9 +40,16 @@ namespace MStorage.WebStorage
             return r.Files.Select(x => x.ObjectName);
         }
 
-        public override async Task UploadAsync(string name, Stream s)
+        public override async Task UploadAsync(string name, Stream s, bool disposeStream)
         {
-            StatusCodeThrower(await client.PutFile(s, name));
+            try
+            {
+                StatusCodeThrower(await client.PutFile(s, name, disposeStream));
+            }
+            finally
+            {
+                if (disposeStream) { s.Dispose(); }
+            }
         }
 
         public override string ToString()

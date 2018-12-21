@@ -17,23 +17,30 @@ namespace MStorage.WebStorage
         private readonly CloudBlobClient client;
         private readonly CloudBlobContainer container;
 
-        public AzureStorage(string account, string sasToken, string container, ILogger log) : base(account, sasToken, container, log)
+        public AzureStorage(string account, string sasToken, string container) : base(account, sasToken, container)
         {
             StorageCredentials sasCredentials = new StorageCredentials(sasToken);
             CloudStorageAccount sasAccount = new CloudStorageAccount(sasCredentials, account, null, true);
             client = sasAccount.CreateCloudBlobClient();
             this.container = client.GetContainerReference(container);
-            base.log.LogInformation($"Azure storage backend initialized to account {account}.");
         }
 
         /// <summary>
         /// Sends the given file stream to Azure with the given name.
         /// Any existing blob by the specified name is overwritten.
         /// </summary>
-        public override async Task UploadAsync(string name, Stream file)
+        public override async Task UploadAsync(string name, Stream file, bool disposeStream = false)
         {
             var newBlob = container.GetBlockBlobReference(name);
-            await newBlob.UploadFromStreamAsync(file).ContinueWith((x) => { file.Close(); });
+
+            try
+            {
+                await newBlob.UploadFromStreamAsync(file);
+            }
+            finally
+            {
+                if (disposeStream) { file.Dispose(); }
+            }
         }
 
         /// <summary>

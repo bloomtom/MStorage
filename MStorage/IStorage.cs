@@ -10,20 +10,50 @@ namespace MStorage
     public interface IStorage
     {
         /// <summary>
-        /// Deletes the given item if it exists.
+        /// Deletes the given object if it exists.
         /// </summary>
         Task DeleteAsync(string name);
+
         /// <summary>
-        /// Deletes all items stored in the storage container.
+        /// Deletes all stored objects.
         /// </summary>
         Task DeleteAllAsync();
-        Task<IEnumerable<string>> ListAsync();
-        Task<IEnumerable<StatusedValue<string>>> TransferAsync(IStorage destination, bool deleteSource);
+
         /// <summary>
-        /// Uploads the entire given stream and closes it.
+        /// Retrieve a collection of all objects stored.
         /// </summary>
-        Task UploadAsync(string name, Stream file);
-        Task<Stream> DownloadAsync(string name);
+        /// <returns></returns>
+        Task<IEnumerable<string>> ListAsync();
+
+        /// <summary>
+        /// Transfers every object from this instance to another IStorage instance.
+        /// </summary>
+        /// <param name="destination">The instance to transfer to.</param>
+        /// <param name="deleteSource">Delete each object in this store after it has successfully been transferred.</param>
+        /// <returns></returns>
+        Task<IEnumerable<StatusedValue<string>>> TransferAsync(IStorage destination, bool deleteSource);
+
+        /// <summary>
+        /// Uploads the entire given stream. The stream is optionally closed after being consumed.
+        /// </summary>
+        /// <param name="name">The name to give this object.</param>
+        /// <param name="file">The stream to upload.</param>
+        /// <param name="disposeStream">If true, the file stream will be closed automatically after being consumed.</param>
+        Task UploadAsync(string name, Stream file, bool disposeStream = false);
+
+        /// <summary>
+        /// Uploads the file at the given path The original file is optionally deleted after being sent.
+        /// </summary>
+        /// <param name="name">The name to give this object.</param>
+        /// <param name="path">A path to the file to upload.</param>
+        /// <param name="deleteSource">If true, the file on disk will be deleted after the upload is complete.</param>
         Task UploadAsync(string name, string path, bool deleteSource);
+
+        /// <summary>
+        /// Retrieve an object from the store. Throws FileNotFound if the object does not exist.
+        /// </summary>
+        /// <param name="name">The name of the object to retrieve.</param>
+        /// <returns>A stream containing the requested object.</returns>
+        Task<Stream> DownloadAsync(string name);
     }
 }
