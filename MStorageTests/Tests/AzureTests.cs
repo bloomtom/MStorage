@@ -42,6 +42,12 @@ namespace MStorageTests
         }
 
         [TestMethod]
+        public override void TestDeleteNonexistent()
+        {
+            TestDownloadNonexistent(GenerateBackend());
+        }
+
+        [TestMethod]
         public override void TestTransfer()
         {
             TestTransfer(GenerateBackend());

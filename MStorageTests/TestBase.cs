@@ -108,6 +108,31 @@ namespace MStorageTests
             Assert.Fail("Expected FileNotFoundException but no exception was thrown.");
         }
 
+        public abstract void TestDeleteNonexistent();
+        protected static void TestDeleteNonexistent(IStorage s)
+        {
+            try
+            {
+                s.DeleteAsync("donotcreate-" + DateTime.Now.Ticks).Wait();
+            }
+            catch (FileNotFoundException)
+            {
+                return;
+            }
+            catch (AggregateException ex)
+            {
+                if (ex.InnerExceptions[0].GetType() == typeof(FileNotFoundException))
+                {
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Assert.Fail("Expected FileNotFoundException but got " + ex.ToString());
+            }
+            Assert.Fail("Expected FileNotFoundException but no exception was thrown.");
+        }
+
         public abstract void TestTransfer();
         protected static void TestTransfer(IStorage s)
         {
