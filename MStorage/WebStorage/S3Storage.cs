@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Amazon;
-using Microsoft.Extensions.Logging;
 
 namespace MStorage.WebStorage
 {
