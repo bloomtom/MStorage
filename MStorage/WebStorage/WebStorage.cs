@@ -183,7 +183,7 @@ namespace MStorage.WebStorage
                 case HttpStatusCode.ServiceUnavailable:
                     throw new TemporaryFailureException("503 Service Unavailable");
                 case HttpStatusCode.TooManyRequests:
-                    throw new TemporaryFailureException("503 Service Unavailable");
+                    throw new TemporaryFailureException("429 Too Many Requests");
                 case HttpStatusCode.Unauthorized:
                     throw new UnauthorizedAccessException("401 Unauthorized");
                 case HttpStatusCode.UnavailableForLegalReasons:

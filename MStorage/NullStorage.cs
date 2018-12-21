@@ -14,6 +14,9 @@ namespace MStorage
     {
         private readonly Dictionary<string, long> stored = new Dictionary<string, long>();
 
+        /// <summary>
+        /// Initialize the null storage.
+        /// </summary>
         public NullStorage()
         {
         }

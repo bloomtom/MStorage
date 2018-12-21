@@ -12,6 +12,9 @@ using System.Threading;
 
 namespace MStorage.WebStorage
 {
+    /// <summary>
+    /// Object storage backend for Microsoft Azure Blob Storage.
+    /// </summary>
     public class AzureStorage : WebStorage, IStorage
     {
         private readonly CloudBlobClient client;

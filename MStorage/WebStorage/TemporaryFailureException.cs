@@ -10,10 +10,16 @@ namespace MStorage.WebStorage
     /// </summary>
     public class TemporaryFailureException : Exception
     {
+        /// <summary>
+        /// Create a new TemporaryFailureException with just a message.
+        /// </summary>
         public TemporaryFailureException(string message) : base(message)
         {
         }
 
+        /// <summary>
+        /// Create a new TemporaryFailureException with a message and include an inner exception.
+        /// </summary>
         public TemporaryFailureException(string message, Exception innerException) : base(message, innerException)
         {
         }

@@ -18,6 +18,9 @@ namespace MStorage.FilesystemStorage
         /// </summary>
         public string RootDirectory { get; private set; }
 
+        /// <summary>
+        /// Initialize the backend to the given root directory on disk
+        /// </summary>
         public FilesystemStorage(string rootDirectory)
         {
             RootDirectory = rootDirectory;
