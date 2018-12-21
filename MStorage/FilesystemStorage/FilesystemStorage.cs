@@ -24,6 +24,10 @@ namespace MStorage.FilesystemStorage
             Directory.CreateDirectory(RootDirectory);
         }
 
+        /// <summary>
+        /// Deletes the entire root directory including all stored files and subdirectories.
+        /// This is a dangerous operation if the root directory is shared!
+        /// </summary>
         public Task DeleteAllAsync()
         {
             try
@@ -40,22 +44,42 @@ namespace MStorage.FilesystemStorage
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Deletes a single file from disk by the given name. Throws FileNotFound exception if it doesnt exist.
+        /// </summary>
+        /// <param name="name">The file to delete.</param>
         public Task DeleteAsync(string name)
         {
             File.Delete(GetFullPath(name));
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Calls OpenRead on the given object name.
+        /// </summary>
+        /// <param name="name">The object name to open.</param>
+        /// <returns></returns>
         public Task<Stream> DownloadAsync(string name)
         {
             return Task.FromResult<Stream>(File.OpenRead(GetFullPath(name)));
         }
 
+        /// <summary>
+        /// Retrieves a list of all files stored in the root directory.
+        /// Subdirectories and inaccessible files are not returned.
+        /// </summary>
+        /// <returns>A collection of object names.</returns>
         public Task<IEnumerable<string>> ListAsync()
         {
             return Task.FromResult(ListFiles());
         }
 
+        /// <summary>
+        /// Transfer all files (by ListAsync) to the given destination store.
+        /// </summary>
+        /// <param name="destination">The instance to transfer to.</param>
+        /// <param name="deleteSource">Delete each object in this store after it has successfully been transferred.</param>
+        /// <returns>A collection of statuses indicating the success or failure state for each transfered object.</returns>
         public async Task<IEnumerable<StatusedValue<string>>> TransferAsync(IStorage destination, bool deleteSource)
         {
             if (Equals(destination))
@@ -88,6 +112,12 @@ namespace MStorage.FilesystemStorage
             return result;
         }
 
+        /// <summary>
+        /// Saves the given stream to disk. The stream is optionally closed after being consumed.
+        /// </summary>
+        /// <param name="name">The filename to give this object.</param>
+        /// <param name="file">The stream to upload.</param>
+        /// <param name="disposeStream">If true, the file stream will be closed automatically after being consumed.</param>
         public async Task UploadAsync(string name, Stream file, bool disposeStream)
         {
             try
@@ -103,6 +133,12 @@ namespace MStorage.FilesystemStorage
             }
         }
 
+        /// <summary>
+        /// Copies the file at the given path into the store. The original file is optionally deleted after being copied.
+        /// </summary>
+        /// <param name="name">The filename to give this object.</param>
+        /// <param name="path">A path to the file to upload.</param>
+        /// <param name="deleteSource">If true, the file on disk will be deleted after the upload is complete.</param>
         public Task UploadAsync(string name, string path, bool deleteSource)
         {
             string destFileName = GetFullPath(name);
@@ -131,6 +167,10 @@ namespace MStorage.FilesystemStorage
             return foundFiles;
         }
 
+        /// <summary>
+        /// If the compare object is of type FilesystemStorage, returns this.RootDirectory == obj.RootDirectory
+        /// Else returns base.Equals(obj)
+        /// </summary>
         public override bool Equals(object obj)
         {
             if (obj is FilesystemStorage x)
@@ -143,11 +183,17 @@ namespace MStorage.FilesystemStorage
             return base.Equals(obj);
         }
 
+        /// <summary>
+        /// Returns RootDirectory.GetHashCode()
+        /// </summary>
         public override int GetHashCode()
         {
             return RootDirectory.GetHashCode();
         }
 
+        /// <summary>
+        /// Returns "Filesystem {RootDirectory}"
+        /// </summary>
         public override string ToString()
         {
             return $"Filesystem {RootDirectory}";

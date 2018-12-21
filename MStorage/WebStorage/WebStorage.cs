@@ -8,13 +8,16 @@ using System.Threading.Tasks;
 
 namespace MStorage.WebStorage
 {
+    /// <summary>
+    /// An abstract class for web API based storage backends.
+    /// </summary>
     public abstract class WebStorage : IStorage
     {
         protected readonly string user;
         protected readonly string apiKey;
         protected readonly string bucket;
 
-        public WebStorage(string user, string apiKey, string bucket)
+        protected WebStorage(string user, string apiKey, string bucket)
         {
             this.user = user;
             this.apiKey = apiKey;
@@ -44,6 +47,9 @@ namespace MStorage.WebStorage
 
         public abstract override string ToString();
 
+        /// <summary>
+        /// Deletes all stored objects.
+        /// </summary>
         public virtual async Task DeleteAllAsync()
         {
             var items = await ListAsync();
@@ -53,6 +59,12 @@ namespace MStorage.WebStorage
             }
         }
 
+        /// <summary>
+        /// Transfers every object from this instance to another IStorage instance.
+        /// </summary>
+        /// <param name="destination">The instance to transfer to.</param>
+        /// <param name="deleteSource">Delete each object in this store after it has successfully been transferred.</param>
+        /// <returns>A collection of statuses indicating the success or failure state for each transfered object.</returns>
         public virtual async Task<IEnumerable<StatusedValue<string>>> TransferAsync(IStorage destination, bool deleteSource)
         {
             if (Equals(destination))
@@ -98,6 +110,12 @@ namespace MStorage.WebStorage
             return returnList;
         }
 
+        /// <summary>
+        /// If obj is type WebStorage and (x.user == user && x.bucket == bucket), returns true.
+        /// Else returns base.Equals(obj)
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
         public override bool Equals(object obj)
         {
             if (obj is WebStorage x)
@@ -110,12 +128,16 @@ namespace MStorage.WebStorage
             return base.Equals(obj);
         }
 
+        /// <summary>
+        /// Returns HashCode.Combine(user, bucket)
+        /// </summary>
+        /// <returns></returns>
         public override int GetHashCode()
         {
             return HashCode.Combine(user, bucket);
         }
 
-        public void StatusCodeThrower(HttpStatusCode code)
+        protected void StatusCodeThrower(HttpStatusCode code)
         {
             switch (code)
             {

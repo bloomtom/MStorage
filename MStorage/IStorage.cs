@@ -10,7 +10,7 @@ namespace MStorage
     public interface IStorage
     {
         /// <summary>
-        /// Deletes the given object if it exists.
+        /// Deletes the given object if it exists. Throws FileNotFound exception if it doesnt.
         /// </summary>
         Task DeleteAsync(string name);
 
@@ -20,9 +20,9 @@ namespace MStorage
         Task DeleteAllAsync();
 
         /// <summary>
-        /// Retrieve a collection of all objects stored.
+        /// Retrieve a collection of all object names stored.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>A collection of object names.</returns>
         Task<IEnumerable<string>> ListAsync();
 
         /// <summary>
@@ -30,7 +30,7 @@ namespace MStorage
         /// </summary>
         /// <param name="destination">The instance to transfer to.</param>
         /// <param name="deleteSource">Delete each object in this store after it has successfully been transferred.</param>
-        /// <returns></returns>
+        /// <returns>A collection of statuses indicating the success or failure state for each transfered object.</returns>
         Task<IEnumerable<StatusedValue<string>>> TransferAsync(IStorage destination, bool deleteSource);
 
         /// <summary>
@@ -42,7 +42,7 @@ namespace MStorage
         Task UploadAsync(string name, Stream file, bool disposeStream = false);
 
         /// <summary>
-        /// Uploads the file at the given path The original file is optionally deleted after being sent.
+        /// Uploads the file at the given path. The original file is optionally deleted after being sent.
         /// </summary>
         /// <param name="name">The name to give this object.</param>
         /// <param name="path">A path to the file to upload.</param>
