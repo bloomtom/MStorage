@@ -1,8 +1,10 @@
-﻿using System;
+﻿using HttpProgress;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MStorage.WebStorage
@@ -23,18 +25,22 @@ namespace MStorage.WebStorage
             this.bucket = bucket;
         }
 
-        public abstract Task<IEnumerable<string>> ListAsync();
+        public abstract Task<IEnumerable<string>> ListAsync(CancellationToken cancel = default(CancellationToken));
 
-        public abstract Task<Stream> DownloadAsync(string name);
+        public abstract Task<Stream> DownloadAsync(string name, CancellationToken cancel = default(CancellationToken));
 
-        public abstract Task UploadAsync(string name, Stream file, bool disposeStream = false);
+        public abstract Task DownloadAsync(string name, Stream output, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken));
 
-        public virtual async Task UploadAsync(string name, string path, bool deleteSource)
+        public abstract Task UploadAsync(string name, Stream file, bool disposeStream = false, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken), long expectedStreamLength = 0);
+
+        public virtual async Task UploadAsync(string name, string path, bool deleteSource, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken))
         {
+            if (cancel.IsCancellationRequested) { return; }
+
             if (!File.Exists(path)) { throw new ArgumentOutOfRangeException("path", $"No file exists at the given path {path}"); }
             using (var s = File.OpenRead(path))
             {
-                await UploadAsync(name, s, false);
+                await UploadAsync(name, s, false, progress, cancel);
             }
             if (deleteSource)
             {
@@ -42,19 +48,28 @@ namespace MStorage.WebStorage
             }
         }
 
-        public abstract Task DeleteAsync(string name);
+        public abstract Task DeleteAsync(string name, CancellationToken cancel = default(CancellationToken));
 
         public abstract override string ToString();
 
         /// <summary>
         /// Deletes all stored objects.
         /// </summary>
-        public virtual async Task DeleteAllAsync()
+        /// <param name="cancel">Allows the operation to be canceled.</param>
+        /// <param name="progress">Invoked on every delete with the current count of processed items.</param>
+        /// <returns></returns>
+        public virtual async Task DeleteAllAsync(IProgress<long> progress = null, CancellationToken cancel = default(CancellationToken))
         {
-            var items = await ListAsync();
+            var items = await ListAsync(cancel);
+            long count = 0;
             foreach (var item in items)
             {
-                await DeleteAsync(item);
+                if (cancel.IsCancellationRequested) { return; }
+
+                await DeleteAsync(item, cancel);
+
+                count++;
+                if (progress != null) { progress.Report(count); }
             }
         }
 
@@ -63,50 +78,60 @@ namespace MStorage.WebStorage
         /// </summary>
         /// <param name="destination">The instance to transfer to.</param>
         /// <param name="deleteSource">Delete each object in this store after it has successfully been transferred.</param>
-        /// <returns>A collection of statuses indicating the success or failure state for each transfered object.</returns>
-        public virtual async Task<IEnumerable<StatusedValue<string>>> TransferAsync(IStorage destination, bool deleteSource)
+        /// <param name="success">Fires after each successful transfer. Provides the name of the object transferred.</param>
+        /// <param name="error">Fires when a transfer or delete error is seen.</param>
+        /// <param name="cancel">Allows the transfer operation to be canceled.</param>
+        public virtual async Task TransferAsync(IStorage destination, bool deleteSource, IProgress<string> success = null, IProgress<ExceptionWithValue<string>> error = null, CancellationToken cancel = default(CancellationToken))
         {
             if (Equals(destination))
             {
                 // Target is same as source. Nothing to do.
-                return Enumerable.Empty<StatusedValue<string>>();
+                return;
             }
 
-            var returnList = new List<StatusedValue<string>>();
             var items = await ListAsync();
             foreach (var item in items)
             {
+                if (cancel.IsCancellationRequested) { return; }
+
                 try
                 {
                     using (var s = await DownloadAsync(item))
                     {
-                        await destination.UploadAsync(item, s, false);
+                        await destination.UploadAsync(item, s, false, null, cancel);
                     }
                 }
                 catch (Exception ex)
                 {
-                    returnList.Add(new StatusedValue<string>(item, false, ex));
+                    if (error != null)
+                    {
+                        error.Report(new ExceptionWithValue<string>(item, ex));
+                    }
                     continue;
                 }
+
+                // Allow cancel before delete is fired.
+                if (cancel.IsCancellationRequested) { return; }
 
                 // Delete the old file if it was transfered, and deletion was requested.
                 if (deleteSource)
                 {
                     try
                     {
-                        await DeleteAsync(item);
+                        await DeleteAsync(item, cancel);
                     }
                     catch (Exception ex)
                     {
-                        returnList.Add(new StatusedValue<string>(item, false, ex));
+                        if (error != null)
+                        {
+                            error.Report(new ExceptionWithValue<string>(item, ex));
+                        }
                         continue;
                     }
                 }
 
-                returnList.Add(new StatusedValue<string>(item, true, null));
+                if (success != null) { success.Report(item); }
             }
-
-            return returnList;
         }
 
         /// <summary>

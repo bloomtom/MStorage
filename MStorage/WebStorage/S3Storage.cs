@@ -2,11 +2,38 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Amazon;
+using Amazon.Runtime;
+using HttpProgress;
 
 namespace MStorage.WebStorage
 {
+    internal class S3ProgressTranslation : IProgress<StreamTransferProgressArgs>
+    {
+        private readonly System.Diagnostics.Stopwatch totalTime = new System.Diagnostics.Stopwatch();
+
+        private readonly System.Diagnostics.Stopwatch instantTime = new System.Diagnostics.Stopwatch();
+
+        private readonly IProgress<ICopyProgress> progress;
+        private readonly long expectedBytes;
+
+        public S3ProgressTranslation(IProgress<ICopyProgress> progress, long expectedBytes)
+        {
+            this.progress = progress;
+            this.expectedBytes = expectedBytes;
+            totalTime.Start();
+            instantTime.Start();
+        }
+
+        public void Report(StreamTransferProgressArgs value)
+        {
+            progress.Report(new CopyProgress(totalTime.Elapsed, Statics.ComputeInstantRate(instantTime.ElapsedTicks, value.IncrementTransferred), value.TotalBytes, expectedBytes));
+            instantTime.Restart();
+        }
+    }
+
     /// <summary>
     /// An IStorage implementation for Amazon S3 or an S3 compatible endpoint.
     /// </summary>
@@ -43,13 +70,15 @@ namespace MStorage.WebStorage
         }
 
         /// <summary>
-        /// Deletes the given object if it exists. Throws FileNotFound exception if it doesnt.
+        /// Deletes the given object if it exists. Throws FileNotFound exception if it doesn't.
         /// </summary>
-        public override async Task DeleteAsync(string name)
+        /// <param name="name">The object to delete.</param>
+        /// <param name="cancel">Allows cancellation of the delete operation.</param>
+        public override async Task DeleteAsync(string name, CancellationToken cancel = default(CancellationToken))
         {
             try
             {
-                StatusCodeThrower((await client.DeleteObjectAsync(bucket, name)).HttpStatusCode);
+                StatusCodeThrower((await client.DeleteObjectAsync(bucket, name, cancel)).HttpStatusCode);
             }
             catch (Amazon.S3.AmazonS3Exception ex)
             {
@@ -62,14 +91,38 @@ namespace MStorage.WebStorage
         /// Retrieve an object from the store. Throws FileNotFound if the object does not exist.
         /// </summary>
         /// <param name="name">The name of the object to retrieve.</param>
+        /// <param name="cancel">Allows cancellation of the transfer.</param>
         /// <returns>A stream containing the requested object.</returns>
-        public override async Task<Stream> DownloadAsync(string name)
+        public override async Task<Stream> DownloadAsync(string name, CancellationToken cancel = default(CancellationToken))
         {
             try
             {
-                var response = await client.GetObjectAsync(bucket, name);
+                var response = await client.GetObjectAsync(bucket, name, cancel);
                 StatusCodeThrower(response.HttpStatusCode);
                 return response.ResponseStream;
+            }
+            catch (Amazon.S3.AmazonS3Exception ex)
+            {
+                StatusCodeThrower(ex.StatusCode);
+                throw ex;
+            }
+        }
+
+        /// <summary>
+        /// Retrieve an object from the store. Throws FileNotFound if the object does not exist.
+        /// </summary>
+        /// <param name="name">The name of the object to retrieve.</param>
+        /// <param name="output">The output stream data will be copied to.</param>
+        /// <param name="progress">Fires periodically with transfer progress.</param>
+        /// <param name="cancel">Allows cancellation of the transfer.</param>
+        public override async Task DownloadAsync(string name, Stream output, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken))
+        {
+            try
+            {
+                using (var response = await client.GetObjectAsync(bucket, name, cancel))
+                {
+                    await response.ResponseStream.CopyToAsync(output, expectedTotalBytes: response.ContentLength, progressReport: progress, cancelToken: cancel);
+                }
             }
             catch (Amazon.S3.AmazonS3Exception ex)
             {
@@ -82,11 +135,11 @@ namespace MStorage.WebStorage
         /// Retrieve a collection of all object names stored.
         /// </summary>
         /// <returns>A collection of object names.</returns>
-        public override async Task<IEnumerable<string>> ListAsync()
+        public override async Task<IEnumerable<string>> ListAsync(CancellationToken cancel = default(CancellationToken))
         {
             try
             {
-                return (await client.ListObjectsAsync(bucket)).S3Objects.Select(x => x.Key);
+                return (await client.ListObjectsAsync(bucket, cancel)).S3Objects.Select(x => x.Key);
             }
             catch (Amazon.S3.AmazonS3Exception ex)
             {
@@ -101,17 +154,20 @@ namespace MStorage.WebStorage
         /// <param name="name">The name to give this object.</param>
         /// <param name="file">The stream to upload.</param>
         /// <param name="disposeStream">If true, the file stream will be closed automatically after being consumed.</param>
-        public override async Task UploadAsync(string name, Stream file, bool disposeStream = false)
+        public override async Task UploadAsync(string name, Stream file, bool disposeStream = false, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken), long expectedStreamLength = 0)
         {
             try
             {
+                var progressTranslator = progress != null ? new S3ProgressTranslation(progress, Statics.ComputeStreamLength(file, expectedStreamLength)) : null;
+
                 var r = await client.PutObjectAsync(new Amazon.S3.Model.PutObjectRequest()
                 {
+                    StreamTransferProgress = new EventHandler<StreamTransferProgressArgs>((sender, e) => { if (progressTranslator != null) { progressTranslator.Report(e); } }),
                     BucketName = bucket,
                     Key = name,
                     InputStream = file,
                     AutoCloseStream = disposeStream
-                });
+                }, cancel);
                 StatusCodeThrower(r.HttpStatusCode);
             }
             catch (Amazon.S3.AmazonS3Exception ex)

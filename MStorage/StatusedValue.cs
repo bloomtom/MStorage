@@ -7,32 +7,26 @@ using System.Threading.Tasks;
 namespace MStorage
 {
     /// <summary>
-    /// Encapsulates an arbitrary value along with a success flag.
+    /// Encapsulates an arbitrary value along with an exception.
     /// </summary>
-    public class StatusedValue<T> : IDisposable
+    public class ExceptionWithValue<T> : IDisposable
     {
         /// <summary>
         /// The object which this status code applies to.
         /// </summary>
         public T Value { get; private set; }
         /// <summary>
-        /// True if the operation succeeded.
-        /// </summary>
-        public bool Success { get; private set; }
-        /// <summary>
-        /// If Success is false, this may be populated with exception details.
+        /// Populated with exception details.
         /// </summary>
         public Exception Exception { get; private set; }
 
         /// <summary>
-        /// Create a new StatusedValue.
+        /// Create a new ExceptionWithValue.
         /// </summary>
         /// <param name="value">The object the operation was performed on.</param>
-        /// <param name="success">True if the operation succeeded.</param>
-        /// <param name="ex">An exception, if success is false and an exception is available.</param>
-        public StatusedValue(T value, bool success, Exception ex = null)
+        /// <param name="ex">An exception..</param>
+        public ExceptionWithValue(T value, Exception ex = null)
         {
-            Success = success;
             Value = value;
             Exception = ex;
         }
