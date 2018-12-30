@@ -36,7 +36,7 @@ namespace MStorage.FilesystemStorage
         /// <param name="cancel">Allows cancellation of the delete operation.</param>
         public Task DeleteAllAsync(IProgress<long> progress = null, CancellationToken cancel = default(CancellationToken))
         {
-            if (cancel.IsCancellationRequested) { return Task.FromCanceled(cancel); }
+            cancel.ThrowIfCancellationRequested();
 
             try
             {
@@ -69,12 +69,11 @@ namespace MStorage.FilesystemStorage
         /// Calls OpenRead on the given object name, returning a FileStream. Throws FileNotFound if the object does not exist.
         /// </summary>
         /// <param name="name">The name of the object to retrieve.</param>
-        /// <param name="progress">Progress events are not fired for this implementation.</param>
         /// <param name="cancel">Allows cancellation of the transfer.</param>
         /// <returns>A stream containing the requested object. The underlying type is FileStream.</returns>
         public Task<Stream> DownloadAsync(string name, CancellationToken cancel = default(CancellationToken))
         {
-            if (cancel.IsCancellationRequested) { return Task.FromCanceled<Stream>(cancel); }
+            if (cancel.IsCancellationRequested) { throw new TaskCanceledException("Filesystem download canceled", null, cancel); }
             return Task.FromResult<Stream>(File.OpenRead(GetFullPath(name)));
         }
 
@@ -83,13 +82,14 @@ namespace MStorage.FilesystemStorage
         /// </summary>
         /// <param name="name">The name of the object to retrieve.</param>
         /// <param name="output">The output stream data will be copied to.</param>
-        /// <param name="progress">Progress events are not fired for this implementation.</param>
+        /// <param name="progress">Fires periodically with transfer progress if the backend supports it.</param>
         /// <param name="cancel">Allows cancellation of the transfer.</param>
-        /// <returns>A stream containing the requested object. The underlying type is FileStream.</returns>
-        public Task DownloadAsync(string name, Stream output, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken))
+        public async Task DownloadAsync(string name, Stream output, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken))
         {
-            if (cancel.IsCancellationRequested) { return Task.FromCanceled<Stream>(cancel); }
-            return Task.FromResult<Stream>(File.OpenRead(GetFullPath(name)));
+            using (var s = File.OpenRead(GetFullPath(name)))
+            {
+                await s.CopyToAsync(output, progressReport: progress, cancelToken: cancel);
+            } 
         }
 
         /// <summary>
@@ -100,7 +100,7 @@ namespace MStorage.FilesystemStorage
         /// <returns>A collection of object names.</returns>
         public Task<IEnumerable<string>> ListAsync(CancellationToken cancel = default(CancellationToken))
         {
-            if (cancel.IsCancellationRequested) { return Task.FromCanceled<IEnumerable<string>>(cancel); }
+            cancel.ThrowIfCancellationRequested();
 
             return Task.FromResult(ListFiles());
         }
@@ -113,7 +113,7 @@ namespace MStorage.FilesystemStorage
         /// <returns>A collection of statuses indicating the success or failure state for each transfered object.</returns>
         public async Task TransferAsync(IStorage destination, bool deleteSource, IProgress<string> success = null, IProgress<ExceptionWithValue<string>> error = null, CancellationToken cancel = default(CancellationToken))
         {
-            if (cancel.IsCancellationRequested) { return; }
+            cancel.ThrowIfCancellationRequested();
 
             if (Equals(destination))
             {
@@ -181,7 +181,7 @@ namespace MStorage.FilesystemStorage
         /// <param name="cancel">Allows cancellation of the transfer.</param>
         public async Task UploadAsync(string name, string path, bool deleteSource, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken))
         {
-            if (cancel.IsCancellationRequested) { return; }
+            cancel.ThrowIfCancellationRequested();
 
             string destFileName = GetFullPath(name);
             var info = new FileInfo(path);

@@ -53,5 +53,17 @@ namespace MStorageTests
         {
             TestTransfer(GenerateBackend());
         }
+
+        [TestMethod]
+        public override void TestCancellation()
+        {
+            TestCancellation(GenerateBackend());
+        }
+
+        [TestMethod]
+        public override void TestProgress()
+        {
+            TestProgress("TestC", TestSettings.progressFileSize, GenerateBackend());
+        }
     }
 }

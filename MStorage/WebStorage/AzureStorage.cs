@@ -24,6 +24,8 @@ namespace MStorage.WebStorage
         private readonly IProgress<ICopyProgress> progress;
         private readonly long expectedBytes;
 
+        private bool enableReporting = true;
+
         public AzureProgressTranslation(IProgress<ICopyProgress> progress, long expectedBytes)
         {
             this.progress = progress;
@@ -34,6 +36,12 @@ namespace MStorage.WebStorage
 
         public void Report(StorageProgress value)
         {
+            if (!enableReporting || value.BytesTransferred == 0) { return; }
+            if (value.BytesTransferred == expectedBytes)
+            {
+                enableReporting = false;
+            }
+
             progress.Report(new CopyProgress(totalTime.Elapsed, Statics.ComputeInstantRate(instantTime.ElapsedTicks, value.BytesTransferred - lastTransferredBytes), value.BytesTransferred, expectedBytes));
 
             lastTransferredBytes = value.BytesTransferred;
@@ -82,9 +90,8 @@ namespace MStorage.WebStorage
         /// <param name="disposeStream">If true, the file stream will be closed automatically after being consumed.</param>
         public override async Task UploadAsync(string name, Stream file, bool disposeStream = false, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken), long expectedStreamLength = 0)
         {
-            if (cancel.IsCancellationRequested) { return; }
+            cancel.ThrowIfCancellationRequested();
             var newBlob = container.GetBlockBlobReference(name);
-            if (cancel.IsCancellationRequested) { return; }
 
             try
             {
@@ -105,6 +112,7 @@ namespace MStorage.WebStorage
         /// <returns>A stream containing the requested object.</returns>
         public override async Task<Stream> DownloadAsync(string name, CancellationToken cancel = default(CancellationToken))
         {
+            cancel.ThrowIfCancellationRequested();
             var blob = container.GetBlobReference(name);
             if (await blob.ExistsAsync() == false)
             {
@@ -122,6 +130,7 @@ namespace MStorage.WebStorage
         /// <param name="cancel">Allows cancellation of the transfer.</param>
         public override async Task DownloadAsync(string name, Stream output, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken))
         {
+            cancel.ThrowIfCancellationRequested();
             var blob = container.GetBlobReference(name);
             if (await blob.ExistsAsync() == false)
             {
@@ -140,7 +149,7 @@ namespace MStorage.WebStorage
         /// <returns>A collection of object names.</returns>
         public override async Task<IEnumerable<string>> ListAsync(CancellationToken cancel = default(CancellationToken))
         {
-            if (cancel.IsCancellationRequested) { return await Task.FromCanceled<IEnumerable<string>>(cancel); }
+            cancel.ThrowIfCancellationRequested();
             BlobContinuationToken continuationToken = null;
             List<string> results = new List<string>();
             do
@@ -167,6 +176,7 @@ namespace MStorage.WebStorage
         /// <param name="cancel">Allows cancellation of the delete operation.</param>
         public override async Task DeleteAsync(string name, CancellationToken cancel = default(CancellationToken))
         {
+            cancel.ThrowIfCancellationRequested();
             var delBlob = container.GetBlockBlobReference(name);
             await delBlob.DeleteIfExistsAsync(DeleteSnapshotsOption.None, emptyCondition, requestOptions, oc, cancel);
         }

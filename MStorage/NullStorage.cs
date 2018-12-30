@@ -69,9 +69,6 @@ namespace MStorage
         {
             if (cancel.IsCancellationRequested) { return Task.FromCanceled<Stream>(cancel); }
 
-            var sw = new System.Diagnostics.Stopwatch();
-            sw.Start();
-
             if (stored.TryGetValue(name, out long length))
             {
                 return Task.FromResult((Stream)new MemoryStream(new byte[length]));
@@ -90,25 +87,21 @@ namespace MStorage
         /// <param name="output">The output stream data will be copied to.</param>
         /// <param name="progress">Fires periodically with transfer progress if the backend supports it.</param>
         /// <param name="cancel">Allows cancellation of the transfer.</param>
-        public Task DownloadAsync(string name, Stream output, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken))
+        public async Task DownloadAsync(string name, Stream output, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken))
         {
-            if (cancel.IsCancellationRequested) { return Task.FromCanceled<Stream>(cancel); }
-
-            var sw = new System.Diagnostics.Stopwatch();
-            sw.Start();
+            cancel.ThrowIfCancellationRequested();
 
             if (stored.TryGetValue(name, out long length))
             {
                 using (Stream s = new MemoryStream(new byte[length]))
                 {
-                    s.CopyToAsync(output, expectedTotalBytes: length, progressReport: progress, cancelToken: cancel);
+                    await s.CopyToAsync(output, expectedTotalBytes: length, progressReport: progress, cancelToken: cancel);
                 }
             }
             else
             {
                 throw new FileNotFoundException();
             }
-            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -192,12 +185,14 @@ namespace MStorage
             {
                 const long bufferSize = 32768;
                 long length = 0;
+                long lastReported = 0;
                 while (file.ReadByte() != -1)
                 {
                     length++;
 
                     if (length % bufferSize == 0)
                     {
+                        lastReported = length;
                         progress.Report(new CopyProgress(totalTime.Elapsed, Statics.ComputeInstantRate(instantTime.ElapsedTicks, bufferSize), length, expectedStreamLength));
                         instantTime.Restart();
                     }
@@ -205,7 +200,7 @@ namespace MStorage
 
                 stored[name] = length;
 
-                if (progress != null) { ReportProgress(progress, totalTime, length); }
+                if (progress != null && lastReported != length) { ReportProgress(progress, totalTime, length); }
                 return Task.CompletedTask;
             }
             finally

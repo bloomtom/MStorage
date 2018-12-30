@@ -10,6 +10,7 @@ Storing files on the local filesystem is easy. Storing them on a cloud provider 
   - [Usage](#usage)
   - [IStorage API](#istorage-api)
   - [Exceptions](#exceptions)
+  - [Progress Reporting](#progress)
   - [Transferring Between Backends](#transferring-between-backends)
   - [Testing](#testing)
 
@@ -68,28 +69,35 @@ You can do more than the above of course. The following is the generic interface
     public interface IStorage
     {
         /// <summary>
-        /// Deletes the given object if it exists. Throws FileNotFound exception if it doesnt.
+        /// Deletes the given object if it exists. Throws FileNotFound exception if it doesn't.
         /// </summary>
-        Task DeleteAsync(string name);
+        /// <param name="name">The object to delete.</param>
+        /// <param name="cancel">Allows cancellation of the delete operation.</param>
+        Task DeleteAsync(string name, CancellationToken cancel = default(CancellationToken));
 
         /// <summary>
         /// Deletes all stored objects.
         /// </summary>
-        Task DeleteAllAsync();
+        /// <param name="progress">Fires on every delete with the current count of deleted items if the backend supports it.</param>
+        /// <param name="cancel">Allows cancellation of the delete operation.</param>
+        Task DeleteAllAsync(IProgress<long> progress = null, CancellationToken cancel = default(CancellationToken));
 
         /// <summary>
         /// Retrieve a collection of all object names stored.
         /// </summary>
+        /// <param name="cancel">Allows cancellation of the list operation.</param>
         /// <returns>A collection of object names.</returns>
-        Task<IEnumerable<string>> ListAsync();
+        Task<IEnumerable<string>> ListAsync(CancellationToken cancel = default(CancellationToken));
 
         /// <summary>
         /// Transfers every object from this instance to another IStorage instance.
         /// </summary>
         /// <param name="destination">The instance to transfer to.</param>
         /// <param name="deleteSource">Delete each object in this store after it has successfully been transferred.</param>
-        /// <returns>A collection of statuses indicating the success or failure state for each transfered object.</returns>
-        Task<IEnumerable<StatusedValue<string>>> TransferAsync(IStorage destination, bool deleteSource);
+        /// <param name="success">Fires after each successful transfer. Provides the name of the object transferred.</param>
+        /// <param name="error">Fires when a transfer or delete error is seen.</param>
+        /// <param name="cancel">Allows cancellation of the transfer.</param>
+        Task TransferAsync(IStorage destination, bool deleteSource, IProgress<string> success = null, IProgress<ExceptionWithValue<string>> error = null, CancellationToken cancel = default(CancellationToken));
 
         /// <summary>
         /// Uploads the entire given stream. The stream is optionally closed after being consumed.
@@ -97,7 +105,10 @@ You can do more than the above of course. The following is the generic interface
         /// <param name="name">The name to give this object.</param>
         /// <param name="file">The stream to upload.</param>
         /// <param name="disposeStream">If true, the file stream will be closed automatically after being consumed.</param>
-        Task UploadAsync(string name, Stream file, bool disposeStream = false);
+        /// <param name="progress">Fires periodically with transfer progress if the backend supports it.</param>
+        /// <param name="cancel">Allows cancellation of the transfer.</param>
+        /// <param name="expectedStreamLength">Allows overriding the stream's expected length for progress reporting as some stream types do not support Length.</param>
+        Task UploadAsync(string name, Stream file, bool disposeStream = false, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken), long expectedStreamLength = 0);
 
         /// <summary>
         /// Uploads the file at the given path. The original file is optionally deleted after being sent.
@@ -105,14 +116,26 @@ You can do more than the above of course. The following is the generic interface
         /// <param name="name">The name to give this object.</param>
         /// <param name="path">A path to the file to upload.</param>
         /// <param name="deleteSource">If true, the file on disk will be deleted after the upload is complete.</param>
-        Task UploadAsync(string name, string path, bool deleteSource);
+        /// <param name="progress">Fires periodically with transfer progress if the backend supports it.</param>
+        /// <param name="cancel">Allows cancellation of the transfer.</param>
+        Task UploadAsync(string name, string path, bool deleteSource, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken));
 
         /// <summary>
         /// Retrieve an object from the store. Throws FileNotFound if the object does not exist.
         /// </summary>
         /// <param name="name">The name of the object to retrieve.</param>
+        /// <param name="cancel">Allows cancellation of the transfer.</param>
         /// <returns>A stream containing the requested object.</returns>
-        Task<Stream> DownloadAsync(string name);
+        Task<Stream> DownloadAsync(string name, CancellationToken cancel = default(CancellationToken));
+
+        /// <summary>
+        /// Retrieve an object from the store. Throws FileNotFound if the object does not exist.
+        /// </summary>
+        /// <param name="name">The name of the object to retrieve.</param>
+        /// <param name="output">The output stream data will be copied to.</param>
+        /// <param name="progress">Fires periodically with transfer progress if the backend supports it.</param>
+        /// <param name="cancel">Allows cancellation of the transfer.</param>
+        Task DownloadAsync(string name, Stream output, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken));
     }
 ```
 
@@ -133,8 +156,15 @@ Given the nature of networks, disks, permissions, the weather, and acts of god: 
    - Either there's a bug in this library, or the backend service is down or misbehaving.
  - `TimeoutException`
    - The operation timed out.
+ - `TaskCanceledException`
+   - An operation was cancelled through a cancellation token.
 
 The class `WebStorage.cs` contains more oddball exceptions in the method `StatusCodeThrower`, but you probably don't need to handle them. The exception string will always contain the http status code for web backends, and the filesystem backend will only throw standard file IO exceptions. Depending on your use case you might just log the rare outliers, or fail fast on them.
+
+<a name="progress"></a>
+## Progress Reporting
+
+The methods `DeleteAllAsync`, `TransferAsync`, `DownloadAsync` and `UploadAsync` all support progress reporting via `IProgress<T>`. Upload and download operations report progress using `ICopyProgress` from the [`HttpProgress`](https://github.com/bloomtom/HttpProgress) library. It's recommended that you read the notes on `ICopyProgress` and `IProgress<T>` available in that library before using progress reporting.
 
 <a name="transferring-between-backends"></a>
 ## Transferring Between Backends
@@ -144,29 +174,37 @@ You may come across a situation where you need to move something or everything f
 <a name="testing"></a>
 ## Testing
 
-A test project is included in this repository, and testing the null / filesystem backends works out of the box. Testing the web backends requires a little more work since the services they connect to are not mocked. The following credential container class is expected under `/MStorageTests/ConnectionInfo.cs`. The `.gitignore` file excludes this from commits.
+A test project is included in this repository, and testing the null / filesystem backends works out of the box. Testing the web backends requires a little more work since the services they connect to are not mocked. The following credential container class is expected under `/MStorageTests/ConnectionInfo.cs`. The `.gitignore` file excludes this from commits to prevent credential leaks via git.
 ```csharp
 namespace MStorageTests
 {
+    internal static class TestSettings
+    {
+        private const long MB = 1024 * 1024;
+
+        public const long progressFileSize = MB;
+        public const long bigFileSize = MB * 1024 * 4;
+    }
+	
     internal static class BunConnectionInfo
     {
-        public static readonly string zone = "";
-        public static readonly string apiKey = "";
+        public const string zone = "";
+        public const string apiKey = "";
     }
 
     internal static class AwsConnectionInfo
     {
-        public static readonly string accessKey = "";
-        public static readonly string apiKey = "";
+        public const string accessKey = "";
+        public const string apiKey = "";
         public static readonly Amazon.RegionEndpoint endpoint = Amazon.RegionEndpoint.USEast1;
-        public static readonly string bucket = "";
+        public const string bucket = "";
     }
 
     internal static class AzureConnectionInfo
     {
-        public static readonly string accountName = "";
-        public static readonly string sasToken = "";
-        public static readonly string container = "";
+        public const string accountName = "";
+        public const string sasToken = "";
+        public const string container = "";
     }
 }
 ```
