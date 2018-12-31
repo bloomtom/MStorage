@@ -113,7 +113,7 @@ namespace MStorage.WebStorage
                 // Allow cancel before delete is fired.
                 if (cancel.IsCancellationRequested) { return; }
 
-                // Delete the old file if it was transfered, and deletion was requested.
+                // Delete the old file if it was transferred, and deletion was requested.
                 if (deleteSource)
                 {
                     try

@@ -110,16 +110,16 @@ namespace MStorageTests
             other.TransferAsync(s, true).Wait();
 
             // Transfer to test store and check result.
-            var transfered = s.ListAsync().Result.ToList();
-            transfered.Sort();
-            Assert.AreEqual(3, transfered.Count, "After transferring files, expected the destination count to equal the source.");
-            Assert.AreEqual("A", transfered[0]);
-            Assert.AreEqual("B", transfered[1]);
-            Assert.AreEqual("C", transfered[2]);
-            Assert.AreEqual(emptyTestString, ReadStream(s.DownloadAsync("A").Result), "Expected transfered file content to equal the source.");
+            var transferred = s.ListAsync().Result.ToList();
+            transferred.Sort();
+            Assert.AreEqual(3, transferred.Count, "After transferring files, expected the destination count to equal the source.");
+            Assert.AreEqual("A", transferred[0]);
+            Assert.AreEqual("B", transferred[1]);
+            Assert.AreEqual("C", transferred[2]);
+            Assert.AreEqual(emptyTestString, ReadStream(s.DownloadAsync("A").Result), "Expected transferred file content to equal the source.");
 
             // Transfer from test store and check result.
-            Assert.AreEqual(0, other.ListAsync().Result.Count(), "Expected empty after transfer out with delete set true. Some files may not have transfered correctly.");
+            Assert.AreEqual(0, other.ListAsync().Result.Count(), "Expected empty after transfer out with delete set true. Some files may not have transferred correctly.");
             s.TransferAsync(other, false).Wait();
             Assert.AreEqual(3, other.ListAsync().Result.Count(), "Expected destination to have all files after transfering to it.");
             Assert.AreEqual(3, s.ListAsync().Result.Count(), "Expected source to still have all files as transfer was performed with deleteSource set to false.");
@@ -154,7 +154,7 @@ namespace MStorageTests
                 Assert.AreEqual(testLength, x.ExpectedBytes, $"Expected bytes in progress event ({x.ExpectedBytes}) was not equal to the actual expected value {testLength}");
 
                 lastProgress = x.PercentComplete;
-                totalTransferred = x.BytesTransfered;
+                totalTransferred = x.BytesTransferred;
             }));
 
             // Test upload

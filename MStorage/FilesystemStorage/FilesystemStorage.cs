@@ -110,7 +110,7 @@ namespace MStorage.FilesystemStorage
         /// </summary>
         /// <param name="destination">The instance to transfer to.</param>
         /// <param name="deleteSource">Delete each object in this store after it has successfully been transferred.</param>
-        /// <returns>A collection of statuses indicating the success or failure state for each transfered object.</returns>
+        /// <returns>A collection of statuses indicating the success or failure state for each transferred object.</returns>
         public async Task TransferAsync(IStorage destination, bool deleteSource, IProgress<string> success = null, IProgress<ExceptionWithValue<string>> error = null, CancellationToken cancel = default(CancellationToken))
         {
             cancel.ThrowIfCancellationRequested();
