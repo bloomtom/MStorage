@@ -1,6 +1,7 @@
 ﻿using HttpProgress;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MStorage;
+using NaiveProgress;
 using System;
 using System.Collections.Generic;
 using System.IO;

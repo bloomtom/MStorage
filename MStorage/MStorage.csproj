@@ -5,7 +5,7 @@
     <Copyright>MIT</Copyright>
     <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
     <Company>bloomtom</Company>
-    <Product>bloomtom</Product>
+    <Product>MStorage</Product>
     <Version>0.2.0</Version>
     <Description>Bridges multiple storage backends into a simple object store layer.</Description>
     <PackageId>bloomtom.MStorage</PackageId>
@@ -15,6 +15,7 @@
     <PackageProjectUrl>https://github.com/bloomtom/MStorage</PackageProjectUrl>
     <RepositoryUrl>https://github.com/bloomtom/MStorage</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <Authors>bloomtom</Authors>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
