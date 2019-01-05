@@ -14,10 +14,25 @@ namespace MStorage.WebStorage
     /// </summary>
     public abstract class WebStorage : IStorage
     {
+        /// <summary>
+        /// The user or account ID to use for connections.
+        /// </summary>
         protected readonly string user;
+        /// <summary>
+        /// An api key or authentication code to use for connections.
+        /// </summary>
         protected readonly string apiKey;
+        /// <summary>
+        /// The bucket, container, etc. to store items in.
+        /// </summary>
         protected readonly string bucket;
 
+        /// <summary>
+        /// Initializes the instance with user, apiKey and bucket.
+        /// </summary>
+        /// <param name="user">The user or account ID to use for connections.</param>
+        /// <param name="apiKey">An api key or authentication code to use for connections.</param>
+        /// <param name="bucket">The bucket, container, etc. to store items in.</param>
         protected WebStorage(string user, string apiKey, string bucket)
         {
             this.user = user;
@@ -25,14 +40,49 @@ namespace MStorage.WebStorage
             this.bucket = bucket;
         }
 
+        /// <summary>
+        /// Retrieve a collection of all object names stored.
+        /// </summary>
+        /// <param name="cancel">Allows cancellation of the list operation.</param>
+        /// <returns>A collection of object names.</returns>
         public abstract Task<IEnumerable<string>> ListAsync(CancellationToken cancel = default(CancellationToken));
 
+        /// <summary>
+        /// Retrieve an object from the store. Throws FileNotFound if the object does not exist.
+        /// </summary>
+        /// <param name="name">The name of the object to retrieve.</param>
+        /// <param name="cancel">Allows cancellation of the transfer.</param>
+        /// <returns>A stream containing the requested object.</returns>
         public abstract Task<Stream> DownloadAsync(string name, CancellationToken cancel = default(CancellationToken));
 
+        /// <summary>
+        /// Retrieve an object from the store. Throws FileNotFound if the object does not exist.
+        /// </summary>
+        /// <param name="name">The name of the object to retrieve.</param>
+        /// <param name="output">The output stream data will be copied to.</param>
+        /// <param name="progress">Fires periodically with transfer progress if the backend supports it.</param>
+        /// <param name="cancel">Allows cancellation of the transfer.</param>
         public abstract Task DownloadAsync(string name, Stream output, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken));
 
+        /// <summary>
+        /// Uploads the entire given stream. The stream is optionally closed after being consumed.
+        /// </summary>
+        /// <param name="name">The name to give this object.</param>
+        /// <param name="file">The stream to upload.</param>
+        /// <param name="disposeStream">If true, the file stream will be closed automatically after being consumed.</param>
+        /// <param name="progress">Fires periodically with transfer progress if the backend supports it.</param>
+        /// <param name="cancel">Allows cancellation of the transfer.</param>
+        /// <param name="expectedStreamLength">Allows overriding the stream's expected length for progress reporting as some stream types do not support Length.</param>
         public abstract Task UploadAsync(string name, Stream file, bool disposeStream = false, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken), long expectedStreamLength = 0);
 
+        /// <summary>
+        /// Uploads the file at the given path. The original file is optionally deleted after being sent.
+        /// </summary>
+        /// <param name="name">The name to give this object.</param>
+        /// <param name="path">A path to the file to upload.</param>
+        /// <param name="deleteSource">If true, the file on disk will be deleted after the upload is complete.</param>
+        /// <param name="progress">Fires periodically with transfer progress if the backend supports it.</param>
+        /// <param name="cancel">Allows cancellation of the transfer.</param>
         public virtual async Task UploadAsync(string name, string path, bool deleteSource, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken))
         {
             if (cancel.IsCancellationRequested) { return; }
@@ -48,8 +98,17 @@ namespace MStorage.WebStorage
             }
         }
 
+        /// <summary>
+        /// Deletes the given object if it exists. Throws FileNotFound exception if it doesn't.
+        /// </summary>
+        /// <param name="name">The object to delete.</param>
+        /// <param name="cancel">Allows cancellation of the delete operation.</param>
         public abstract Task DeleteAsync(string name, CancellationToken cancel = default(CancellationToken));
 
+        /// <summary>
+        /// Returns a string describing the type of backend used.
+        /// </summary>
+        /// <returns></returns>
         public abstract override string ToString();
 
         /// <summary>
@@ -135,7 +194,7 @@ namespace MStorage.WebStorage
         }
 
         /// <summary>
-        /// If obj is type WebStorage and (x.user == user && x.bucket == bucket), returns true.
+        /// If obj is type WebStorage and (x.user == user AND x.bucket == bucket), returns true.
         /// Else returns base.Equals(obj)
         /// </summary>
         /// <param name="obj"></param>
@@ -161,6 +220,10 @@ namespace MStorage.WebStorage
             return HashCode.Combine(user, bucket);
         }
 
+        /// <summary>
+        /// Takes an HttpStatusCode and throws an exception if the status is not a success signal. The type of exception thrown is dependent on the code given.
+        /// </summary>
+        /// <param name="code"></param>
         protected void StatusCodeThrower(HttpStatusCode code)
         {
             switch (code)

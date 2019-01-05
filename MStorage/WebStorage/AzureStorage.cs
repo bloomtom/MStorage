@@ -66,6 +66,8 @@ namespace MStorage.WebStorage
         /// <param name="account">The Azure storage account to use.</param>
         /// <param name="sasToken">The Azure SAS token (shared access signature)</param>
         /// <param name="container">The blob service container to use for storage and retrieval.</param>
+        /// <param name="retryPolicy">An Azure retry policy. The default policy (if null) is to retry three times with five seconds between attempts.</param>
+        /// <param name="maximumExecutionTime">The maximum amount of time to wait for any operation to complete. No limit if null.</param>
         public AzureStorage(string account, string sasToken, string container, IRetryPolicy retryPolicy = null, TimeSpan? maximumExecutionTime = null) : base(account, sasToken, container)
         {
             if (retryPolicy == null) { retryPolicy = new LinearRetry(TimeSpan.FromSeconds(5), 3); }
@@ -88,6 +90,9 @@ namespace MStorage.WebStorage
         /// <param name="name">The name to give this object.</param>
         /// <param name="file">The stream to upload.</param>
         /// <param name="disposeStream">If true, the file stream will be closed automatically after being consumed.</param>
+        /// <param name="progress">Fires periodically with transfer progress if the backend supports it.</param>
+        /// <param name="cancel">Allows cancellation of the transfer.</param>
+        /// <param name="expectedStreamLength">Allows overriding the stream's expected length for progress reporting as some stream types do not support Length.</param>
         public override async Task UploadAsync(string name, Stream file, bool disposeStream = false, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken), long expectedStreamLength = 0)
         {
             cancel.ThrowIfCancellationRequested();
@@ -173,6 +178,7 @@ namespace MStorage.WebStorage
         /// <summary>
         /// Deletes the given object if it exists. Throws FileNotFound exception if it doesn't.
         /// </summary>
+        /// <param name="name">The object to delete.</param>
         /// <param name="cancel">Allows cancellation of the delete operation.</param>
         public override async Task DeleteAsync(string name, CancellationToken cancel = default(CancellationToken))
         {

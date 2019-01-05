@@ -34,6 +34,10 @@ namespace MStorage
         #region IDisposable Support
         private bool disposedValue = false;
 
+        /// <summary>
+        /// Implementation of IDisposable.
+        /// </summary>
+        /// <param name="disposing"></param>
         protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)

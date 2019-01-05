@@ -42,6 +42,7 @@ namespace MStorage
         /// <summary>
         /// Deletes the given object if it exists. Throws FileNotFound exception if it doesnt.
         /// </summary>
+        /// <param name="name">The object to delete.</param>
         /// <param name="cancel">Allows cancellation of the delete operation.</param>
         public Task DeleteAsync(string name, CancellationToken cancel = default(CancellationToken))
         {
@@ -170,6 +171,7 @@ namespace MStorage
         /// <param name="disposeStream">If true, the file stream will be closed automatically after being consumed.</param>
         /// <param name="progress">Fires once with transfer statistics.</param>
         /// <param name="cancel">Allows cancellation of the transfer.</param>
+        /// <param name="expectedStreamLength">Allows overriding the stream's expected length for progress reporting as some stream types do not support Length.</param>
         public Task UploadAsync(string name, Stream file, bool disposeStream = false, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken), long expectedStreamLength = 0)
         {
             if (cancel.IsCancellationRequested) { return Task.FromCanceled(cancel); }

@@ -154,6 +154,9 @@ namespace MStorage.WebStorage
         /// <param name="name">The name to give this object.</param>
         /// <param name="file">The stream to upload.</param>
         /// <param name="disposeStream">If true, the file stream will be closed automatically after being consumed.</param>
+        /// <param name="progress">Fires periodically with transfer progress.</param>
+        /// <param name="cancel">Allows cancellation of the transfer.</param>
+        /// <param name="expectedStreamLength">Allows overriding the stream's expected length for progress reporting as some stream types do not support Length.</param>
         public override async Task UploadAsync(string name, Stream file, bool disposeStream = false, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken), long expectedStreamLength = 0)
         {
             try
