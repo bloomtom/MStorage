@@ -195,5 +195,13 @@ namespace MStorage.WebStorage
         {
             return $"Azure {bucket}";
         }
+
+        /// <summary>
+        /// This method is unused for this type. It will immediately return a completed task.
+        /// </summary>
+        public override Task CleanupMultipartUploads(TimeSpan olderThan, CancellationToken cancel = default(CancellationToken))
+        {
+            return Task.CompletedTask;
+        }
     }
 }

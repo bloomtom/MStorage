@@ -12,13 +12,19 @@ namespace MStorageTests
     {
         private static IStorage GenerateBackend()
         {
-            return new MStorage.WebStorage.S3Storage(AwsConnectionInfo.accessKey, AwsConnectionInfo.apiKey, AwsConnectionInfo.endpoint, AwsConnectionInfo.bucket);
+            return new MStorage.WebStorage.S3Storage(AwsConnectionInfo.accessKey, AwsConnectionInfo.apiKey, AwsConnectionInfo.bucket, null, AwsConnectionInfo.endpoint);
         }
 
         [TestMethod]
         public override void TestFullCycle()
         {
             TestFullCycle("testA", testString, GenerateBackend());
+        }
+
+        [TestMethod]
+        public void TestLargeFile()
+        {
+            TestLargeFile("testA", 10, GenerateBackend());
         }
 
         [TestMethod]

@@ -244,5 +244,10 @@ namespace MStorage.FilesystemStorage
         {
             return $"Filesystem {RootDirectory}";
         }
+
+        public Task CleanupMultipartUploads(TimeSpan olderThan, CancellationToken cancel = default(CancellationToken))
+        {
+            return Task.CompletedTask;
+        }
     }
 }

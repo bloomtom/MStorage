@@ -246,5 +246,13 @@ namespace MStorage
         {
             return "NullStorage";
         }
+
+        /// <summary>
+        /// This method is unused for this type. It will immediately return a completed task.
+        /// </summary>
+        public Task CleanupMultipartUploads(TimeSpan olderThan, CancellationToken cancel = default(CancellationToken))
+        {
+            return Task.CompletedTask;
+        }
     }
 }

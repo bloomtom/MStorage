@@ -80,5 +80,12 @@ namespace MStorage
         /// <param name="progress">Fires periodically with transfer progress if the backend supports it.</param>
         /// <param name="cancel">Allows cancellation of the transfer.</param>
         Task DownloadAsync(string name, Stream output, IProgress<ICopyProgress> progress = null, CancellationToken cancel = default(CancellationToken));
+
+        /// <summary>
+        /// Aborts multi-part uploads which were started outside a given time boundary.
+        /// </summary>
+        /// <param name="olderThan">Uploads which were started earlier than this amount of time ago will be aborted.</param>
+        /// <param name="cancel">Allows cancellation of the cleanup operation.</param>
+        Task CleanupMultipartUploads(TimeSpan olderThan, CancellationToken cancel = default(CancellationToken));
     }
 }

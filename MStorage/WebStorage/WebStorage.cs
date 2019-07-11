@@ -106,6 +106,13 @@ namespace MStorage.WebStorage
         public abstract Task DeleteAsync(string name, CancellationToken cancel = default(CancellationToken));
 
         /// <summary>
+        /// Aborts multi-part uploads which were started outside a given time boundary.
+        /// </summary>
+        /// <param name="olderThan">Uploads which were started earlier than this amount of time ago will be aborted.</param>
+        /// <param name="cancel">Allows cancellation of the cleanup operation.</param>
+        public abstract Task CleanupMultipartUploads(TimeSpan olderThan, CancellationToken cancel = default(CancellationToken));
+
+        /// <summary>
         /// Returns a string describing the type of backend used.
         /// </summary>
         /// <returns></returns>

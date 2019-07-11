@@ -36,6 +36,26 @@ namespace MStorageTests
             Assert.IsFalse(s.ListAsync().Result.Contains(filename), "Failed to delete test file during cleanup.");
         }
 
+        protected static void TestLargeFile(string filename, int megabytes, IStorage s)
+        {
+            // Upload a file
+            using (Stream f = new BigStream(1024L * 1024L * megabytes))
+            {
+                s.UploadAsync(filename, f).Wait();
+            }
+
+            // Make sure it exists.
+            Assert.IsTrue(s.ListAsync().Result.Contains(filename), "File not found to exist after upload.");
+
+            // Delete the file
+            s.DeleteAsync(filename).Wait();
+
+            s.CleanupMultipartUploads(TimeSpan.Zero).Wait();
+
+            // Make sure it's gone.
+            Assert.IsFalse(s.ListAsync().Result.Contains(filename), "Failed to delete test file during cleanup.");
+        }
+
         public abstract void TestDoubleUpload();
         protected static void TestDoubleUpload(string filename, string fileBody, IStorage s)
         {
