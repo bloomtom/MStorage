@@ -31,14 +31,14 @@ namespace MStorage.WebStorage
 
         public void Report(StreamTransferProgressArgs value)
         {
-            progress.Report(new CopyProgress(totalTime.Elapsed, Statics.ComputeInstantRate(instantTime.ElapsedTicks, value.IncrementTransferred), value.TotalBytes, expectedBytes));
+            progress.Report(new CopyProgress(totalTime.Elapsed, Statics.ComputeInstantRate(instantTime.ElapsedTicks, value.IncrementTransferred), value.TransferredBytes, expectedBytes));
             instantTime.Restart();
         }
 
         long lastTransferred = 0;
         public void Report(UploadProgressArgs value)
         {
-            progress.Report(new CopyProgress(totalTime.Elapsed, Statics.ComputeInstantRate(instantTime.ElapsedTicks, value.TransferredBytes - lastTransferred), value.TotalBytes, expectedBytes));
+            progress.Report(new CopyProgress(totalTime.Elapsed, Statics.ComputeInstantRate(instantTime.ElapsedTicks, value.TransferredBytes - lastTransferred), value.TransferredBytes, expectedBytes));
             lastTransferred = value.TransferredBytes;
             instantTime.Restart();
         }
@@ -205,7 +205,13 @@ namespace MStorage.WebStorage
                     InputStream = file,
                     AutoCloseStream = disposeStream
                 };
-                transferRequest.UploadProgressEvent += (sender, e) => { if (progressTranslator != null) { progressTranslator.Report(e); } };
+                transferRequest.UploadProgressEvent += (sender, e) =>
+                {
+                    if (progressTranslator != null)
+                    {
+                        progressTranslator.Report(e);
+                    }
+                };
 
                 await utility.UploadAsync(transferRequest, cancel);
             }
