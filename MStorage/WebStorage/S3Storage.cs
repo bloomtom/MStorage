@@ -52,6 +52,11 @@ namespace MStorage.WebStorage
         private readonly AmazonS3Client client;
 
         /// <summary>
+        /// If set, specifies the canned ACL used for each upload.
+        /// </summary>
+        public S3CannedACL accessControl = null;
+
+        /// <summary>
         /// Generates an S3 client connection to the desired region.
         /// </summary>
         /// <param name="accessKey">The access key / accoun key.</param>
@@ -205,6 +210,8 @@ namespace MStorage.WebStorage
                     InputStream = file,
                     AutoCloseStream = disposeStream
                 };
+                if (accessControl != null) { transferRequest.CannedACL = accessControl; }
+
                 transferRequest.UploadProgressEvent += (sender, e) =>
                 {
                     if (progressTranslator != null)
