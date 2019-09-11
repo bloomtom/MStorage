@@ -65,7 +65,10 @@ namespace MStorage.WebStorage
         /// <param name="bucket">The bucket to use for storage and retrieval.</param>
         public S3Storage(string accessKey, string apiKey, RegionEndpoint endpoint, string bucket) : base(accessKey, apiKey, bucket)
         {
-            client = new AmazonS3Client(accessKey, apiKey, endpoint);
+            var config = GlobalConfig();
+            config.RegionEndpoint = endpoint;
+
+            client = new AmazonS3Client(accessKey, apiKey, config);
         }
 
         /// <summary>
@@ -77,11 +80,9 @@ namespace MStorage.WebStorage
         /// <param name="bucket">The bucket to use for storage and retrieval.</param>
         public S3Storage(string accessKey, string apiKey, string endpoint, string bucket) : base(accessKey, apiKey, bucket)
         {
-            var config = new AmazonS3Config()
-            {
-                ServiceURL = endpoint,
-                Timeout = TimeSpan.FromDays(10)
-            };
+            var config = GlobalConfig();
+            config.ServiceURL = endpoint;
+
             client = new AmazonS3Client(accessKey, apiKey, config);
         }
 
@@ -97,14 +98,19 @@ namespace MStorage.WebStorage
         {
             if (config == null)
             {
-                config = new AmazonS3Config()
-                {
-                    Timeout = TimeSpan.FromDays(10)
-                };
+                config = GlobalConfig();
             }
             if (endpoint != null) { config.ServiceURL = endpoint; }
 
             client = new AmazonS3Client(accessKey, apiKey, config);
+        }
+
+        private static AmazonS3Config GlobalConfig()
+        {
+            return new AmazonS3Config()
+            {
+                Timeout = TimeSpan.FromDays(10)
+            };
         }
 
         /// <summary>
@@ -200,7 +206,7 @@ namespace MStorage.WebStorage
             try
             {
                 var progressTranslator = progress != null ? new S3ProgressTranslation(progress, Statics.ComputeStreamLength(file, expectedStreamLength)) : null;
-
+                
                 var utility = new TransferUtility(client);
 
                 var transferRequest = new TransferUtilityUploadRequest()
@@ -218,7 +224,7 @@ namespace MStorage.WebStorage
                     {
                         progressTranslator.Report(e);
                     }
-                };
+                };                
 
                 await utility.UploadAsync(transferRequest, cancel);
             }
