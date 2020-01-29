@@ -5,17 +5,20 @@
     <Copyright></Copyright>
     <Company>bloomtom</Company>
     <Product>MStorage</Product>
-    <Version>0.3.2</Version>
+    <Version>1.0.0</Version>
     <Description>Bridges multiple storage backends into a simple object store layer.</Description>
     <PackageId>bloomtom.MStorage</PackageId>
     <FileVersion>0.3.2.0</FileVersion>
     <AssemblyVersion>0.3.2.0</AssemblyVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+	<PublishRepositoryUrl>true</PublishRepositoryUrl>
+	<EmbedUntrackedSources>true</EmbedUntrackedSources>
     <PackageProjectUrl>https://github.com/bloomtom/MStorage</PackageProjectUrl>
+	<IncludeSymbols>true</IncludeSymbols>
+	<SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <RepositoryUrl>https://github.com/bloomtom/MStorage</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <Authors>bloomtom</Authors>
-	<AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
 	<PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
@@ -27,6 +30,10 @@
     <PackageReference Include="AWSSDK.S3" Version="3.3.110.19" />
     <PackageReference Include="bloomtom.BunAPI" Version="2.3.3" />
     <PackageReference Include="bloomtom.HttpProgress" Version="2.3.1" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
   </ItemGroup>
 
