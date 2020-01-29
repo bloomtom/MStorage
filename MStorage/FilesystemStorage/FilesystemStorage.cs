@@ -245,6 +245,9 @@ namespace MStorage.FilesystemStorage
             return $"Filesystem {RootDirectory}";
         }
 
+        /// <summary>
+        /// Does nothing. The filesystem backend does not do multipart operations.
+        /// </summary>
         public Task CleanupMultipartUploads(TimeSpan olderThan, CancellationToken cancel = default(CancellationToken))
         {
             return Task.CompletedTask;
