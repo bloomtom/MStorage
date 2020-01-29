@@ -24,7 +24,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.S3" Version="3.3.104.24" />
+    <PackageReference Include="AWSSDK.S3" Version="3.3.110.19" />
     <PackageReference Include="bloomtom.BunAPI" Version="2.3.3" />
     <PackageReference Include="bloomtom.HttpProgress" Version="2.3.1" />
     <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
