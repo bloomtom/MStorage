@@ -1,9 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
-    <Copyright>MIT</Copyright>
-    <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <Copyright></Copyright>
     <Company>bloomtom</Company>
     <Product>MStorage</Product>
     <Version>0.3.2</Version>
@@ -17,6 +16,7 @@
     <RepositoryType>git</RepositoryType>
     <Authors>bloomtom</Authors>
 	<AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
+	<PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
