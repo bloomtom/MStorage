@@ -260,3 +260,4 @@ paket-files/
 __pycache__/
 *.pyc
 /MStorageTests/ConnectionInfo.cs
+/MStorageTests/TestSettings.cs
