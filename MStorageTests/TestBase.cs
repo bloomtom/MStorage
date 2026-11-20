@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace MStorageTests
 {
@@ -24,7 +25,7 @@ namespace MStorageTests
             }
 
             // Make sure it exists.
-            Assert.IsTrue(s.ListAsync().Result.Contains(filename), "File not found to exist after upload.");
+            Assert.IsTrue(s.ListAsync().ToBlockingEnumerable().Contains(filename), "File not found to exist after upload.");
 
             // Make sure the content is what we expect.
             Assert.AreEqual(fileBody, ReadStream(s.DownloadAsync(filename).Result), "Uploaded body is different than what was uploaded.");
@@ -33,7 +34,7 @@ namespace MStorageTests
             s.DeleteAsync(filename).Wait();
 
             // Make sure it's gone.
-            Assert.IsFalse(s.ListAsync().Result.Contains(filename), "Failed to delete test file during cleanup.");
+            Assert.IsFalse(s.ListAsync().ToBlockingEnumerable().Contains(filename), "Failed to delete test file during cleanup.");
         }
 
         protected static void TestLargeFile(string filename, int megabytes, IStorage s)
@@ -45,7 +46,7 @@ namespace MStorageTests
             }
 
             // Make sure it exists.
-            Assert.IsTrue(s.ListAsync().Result.Contains(filename), "File not found to exist after upload.");
+            Assert.IsTrue(s.ListAsync().ToBlockingEnumerable().Contains(filename), "File not found to exist after upload.");
 
             // Delete the file
             s.DeleteAsync(filename).Wait();
@@ -53,7 +54,7 @@ namespace MStorageTests
             s.CleanupMultipartUploads(TimeSpan.Zero).Wait();
 
             // Make sure it's gone.
-            Assert.IsFalse(s.ListAsync().Result.Contains(filename), "Failed to delete test file during cleanup.");
+            Assert.IsFalse(s.ListAsync().ToBlockingEnumerable().Contains(filename), "Failed to delete test file during cleanup.");
         }
 
         public abstract void TestDoubleUpload();
@@ -63,7 +64,7 @@ namespace MStorageTests
             using (Stream f = GenerateStream(fileBody))
             {
                 s.UploadAsync(filename, f, true).Wait();
-                Assert.ThrowsException<ObjectDisposedException>(() => f.Position = 0, "disposeStream was set to true, so it was expected that the stream would be disposed.");
+                Assert.Throws<ObjectDisposedException>(() => f.Position = 0, "disposeStream was set to true, so it was expected that the stream would be disposed.");
             }
             // Upload again.
             using (Stream f = GenerateStream(fileBody))
@@ -72,14 +73,14 @@ namespace MStorageTests
             }
 
             // Ensure only one file exists.
-            Assert.IsTrue(s.ListAsync().Result.Where(x => x == filename).Count() == 1, "A duplicate file was found after performing an overwrite.");
+            Assert.IsTrue(s.ListAsync().ToBlockingEnumerable().Where(x => x == filename).Count() == 1, "A duplicate file was found after performing an overwrite.");
 
             // Ensure the double upload hasn't destroyed the content.
             Assert.AreEqual(fileBody, ReadStream(s.DownloadAsync(filename).Result), "File body was mangled by the overwrite.");
 
             // Clean up.
             s.DeleteAsync(filename).Wait();
-            Assert.IsFalse(s.ListAsync().Result.Contains(filename), "Failed to delete test file during cleanup.");
+            Assert.IsFalse(s.ListAsync().ToBlockingEnumerable().Contains(filename), "Failed to delete test file during cleanup.");
         }
 
         public abstract void TestOverwrite();
@@ -102,7 +103,7 @@ namespace MStorageTests
 
             // Clean up.
             s.DeleteAsync(filename).Wait();
-            Assert.IsFalse(s.ListAsync().Result.Contains(filename), "Failed to delete test file during cleanup.");
+            Assert.IsFalse(s.ListAsync().ToBlockingEnumerable().Contains(filename), "Failed to delete test file during cleanup.");
         }
 
         public abstract void TestDownloadNonexistent();
@@ -131,7 +132,7 @@ namespace MStorageTests
             other.TransferAsync(s, true).Wait();
 
             // Transfer to test store and check result.
-            var transferred = s.ListAsync().Result.ToList();
+            var transferred = s.ListAsync().ToBlockingEnumerable().ToList();
             transferred.Sort();
             Assert.AreEqual(3, transferred.Count, "After transferring files, expected the destination count to equal the source.");
             Assert.AreEqual("A", transferred[0]);
@@ -140,13 +141,13 @@ namespace MStorageTests
             Assert.AreEqual(emptyTestString, ReadStream(s.DownloadAsync("A").Result), "Expected transferred file content to equal the source.");
 
             // Transfer from test store and check result.
-            Assert.AreEqual(0, other.ListAsync().Result.Count(), "Expected empty after transfer out with delete set true. Some files may not have transferred correctly.");
+            Assert.AreEqual(0, other.ListAsync().ToBlockingEnumerable().Count(), "Expected empty after transfer out with delete set true. Some files may not have transferred correctly.");
             s.TransferAsync(other, false).Wait();
-            Assert.AreEqual(3, other.ListAsync().Result.Count(), "Expected destination to have all files after transfering to it.");
-            Assert.AreEqual(3, s.ListAsync().Result.Count(), "Expected source to still have all files as transfer was performed with deleteSource set to false.");
+            Assert.AreEqual(3, other.ListAsync().ToBlockingEnumerable().Count(), "Expected destination to have all files after transfering to it.");
+            Assert.AreEqual(3, s.ListAsync().ToBlockingEnumerable().Count(), "Expected source to still have all files as transfer was performed with deleteSource set to false.");
             Assert.AreEqual(emptyTestString, ReadStream(other.DownloadAsync("A").Result), "Expected file content to remain the same after transfer back to origin.");
             s.TransferAsync(other, true).Wait();
-            Assert.AreEqual(0, s.ListAsync().Result.Count(), "Expected empty store after transfering back with deleteSource set to true.");
+            Assert.AreEqual(0, s.ListAsync().ToBlockingEnumerable().Count(), "Expected empty store after transfering back with deleteSource set to true.");
         }
 
         public abstract void TestCancellation();
@@ -172,7 +173,7 @@ namespace MStorageTests
                 progressIterations++;
                 Assert.IsTrue(x.PercentComplete > lastProgress, $"Percent complete ({x.PercentComplete.ToString("0.###")}) is the same or less than it was during the last progress event (({lastProgress.ToString("0.###")})).");
                 Assert.IsTrue(x.BytesPerSecond > 0, $"Bytes per second was {x.BytesPerSecond}. Expected > 0");
-                Assert.AreEqual(testLength, x.ExpectedBytes, $"Expected bytes in progress event ({x.ExpectedBytes}) was not equal to the actual expected value {testLength}");
+                Assert.AreEqual(x.ExpectedBytes, testLength, $"Expected bytes in progress event ({x.ExpectedBytes}) was not equal to the actual expected value {testLength}");
 
                 lastProgress = x.PercentComplete;
                 totalTransferred = x.BytesTransferred;
@@ -206,7 +207,7 @@ namespace MStorageTests
             s.DeleteAsync(filename).Wait();
 
             // Make sure it's gone.
-            Assert.IsFalse(s.ListAsync().Result.Contains(filename), "Failed to delete test file during cleanup.");
+            Assert.IsFalse(s.ListAsync().ToBlockingEnumerable().Contains(filename), "Failed to delete test file during cleanup.");
         }
 
         protected static void AssertException(Action action, Type expectedException, string assertDescription = null)

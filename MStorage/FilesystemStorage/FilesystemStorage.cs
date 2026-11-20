@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Enumeration;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -98,11 +99,18 @@ namespace MStorage.FilesystemStorage
         /// </summary>
         /// <param name="cancel">Allows cancellation of the list operation.</param>
         /// <returns>A collection of object names.</returns>
-        public Task<IEnumerable<string>> ListAsync(CancellationToken cancel = default(CancellationToken))
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+        public async IAsyncEnumerable<string> ListAsync([EnumeratorCancellation] CancellationToken cancel = default(CancellationToken))
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             cancel.ThrowIfCancellationRequested();
 
-            return Task.FromResult(ListFiles());
+            var files = ListFiles();
+            foreach (var file in files)
+            {
+                cancel.ThrowIfCancellationRequested();
+                yield return file;
+            }
         }
 
         /// <summary>

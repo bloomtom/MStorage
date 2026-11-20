@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using BunAPI;
@@ -15,7 +15,7 @@ namespace MStorage.WebStorage
     /// </summary>
     public class BunnyStorage : WebStorage, IStorage
     {
-        BunClient client;
+        readonly BunClient client;
 
         /// <summary>
         /// Creates a storage connection to BunnyCDN.
@@ -65,11 +65,21 @@ namespace MStorage.WebStorage
         /// Retrieve a collection of all object names stored.
         /// </summary>
         /// <returns>A collection of object names.</returns>
-        public override async Task<IEnumerable<string>> ListAsync(CancellationToken cancel = default(CancellationToken))
+        public override async IAsyncEnumerable<string> ListAsync([EnumeratorCancellation] CancellationToken cancel = default)
         {
+            cancel.ThrowIfCancellationRequested();
+
             var r = await client.ListFiles(cancel);
-            if (r.StatusCode != HttpStatusCode.OK) { return Enumerable.Empty<string>(); }
-            return r.Files.Select(x => x.ObjectName);
+            if (r.StatusCode != HttpStatusCode.OK)
+            {
+                StatusCodeThrower(r.StatusCode);
+            }
+
+            foreach (var blob in r.Files)
+            {
+                cancel.ThrowIfCancellationRequested();
+                yield return blob.ObjectName;
+            }
         }
 
         /// <summary>

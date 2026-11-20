@@ -20,9 +20,7 @@ Storing files on the local filesystem is easy. Storing them on a cloud provider 
 
 Package Name | Target Framework | Version
 ---|---|---
-[MStorage](https://www.nuget.org/packages/bloomtom.MStorage) | .NET Core 2.1 | ![NuGet](https://img.shields.io/nuget/v/bloomtom.MStorage.svg)
-
-This is currently a Core 2.1 package, but will be ported to Standard 2.1 when it becomes available.
+[MStorage](https://www.nuget.org/packages/bloomtom.MStorage) | .NET Standard 2.1 | ![NuGet](https://img.shields.io/nuget/v/bloomtom.MStorage.svg)
 
 <a name="available-backends"></a>
 ## Available Backends

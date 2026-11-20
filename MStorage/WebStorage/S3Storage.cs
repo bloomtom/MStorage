@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
+using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using HttpProgress;
 
@@ -179,16 +181,22 @@ namespace MStorage.WebStorage
         /// Retrieve a collection of all object names stored.
         /// </summary>
         /// <returns>A collection of object names.</returns>
-        public override async Task<IEnumerable<string>> ListAsync(CancellationToken cancel = default(CancellationToken))
+        public override async IAsyncEnumerable<string> ListAsync([EnumeratorCancellation] CancellationToken cancel = default)
         {
-            try
+            cancel.ThrowIfCancellationRequested();
+            var paginator = client.Paginators.ListObjectsV2(new ListObjectsV2Request
             {
-                return (await client.ListObjectsAsync(bucket, cancel)).S3Objects.Select(x => x.Key);
-            }
-            catch (Amazon.S3.AmazonS3Exception ex)
+                BucketName = bucket
+            });
+            await foreach (var response in paginator.Responses.WithCancellation(cancel))
             {
-                StatusCodeThrower(ex.StatusCode);
-                throw ex;
+                if (response.S3Objects != null)
+                {
+                    foreach (var blob in response.S3Objects)
+                    {
+                        yield return blob.Key;
+                    }
+                }
             }
         }
 
@@ -206,7 +214,7 @@ namespace MStorage.WebStorage
             try
             {
                 var progressTranslator = progress != null ? new S3ProgressTranslation(progress, Statics.ComputeStreamLength(file, expectedStreamLength)) : null;
-                
+
                 var utility = new TransferUtility(client);
 
                 var transferRequest = new TransferUtilityUploadRequest()
@@ -224,7 +232,7 @@ namespace MStorage.WebStorage
                     {
                         progressTranslator.Report(e);
                     }
-                };                
+                };
 
                 await utility.UploadAsync(transferRequest, cancel);
             }
@@ -247,12 +255,15 @@ namespace MStorage.WebStorage
         public override async Task CleanupMultipartUploads(TimeSpan olderThan, CancellationToken cancel = default(CancellationToken))
         {
             var uploads = await client.ListMultipartUploadsAsync(bucket, cancel);
-            foreach (var upload in uploads.MultipartUploads)
+            if (uploads.MultipartUploads != null)
             {
-                if (upload.Initiated.Kind != DateTimeKind.Utc) { upload.Initiated = upload.Initiated.ToUniversalTime(); }
-                if (DateTime.UtcNow - upload.Initiated > olderThan)
+                foreach (var upload in uploads.MultipartUploads)
                 {
-                    await client.AbortMultipartUploadAsync(bucket, upload.Key, upload.UploadId, cancel);
+                    if (upload.Initiated.HasValue && upload.Initiated.Value.Kind != DateTimeKind.Utc) { upload.Initiated = upload.Initiated.Value.ToUniversalTime(); }
+                    if (DateTime.UtcNow - upload.Initiated > olderThan)
+                    {
+                        await client.AbortMultipartUploadAsync(bucket, upload.Key, upload.UploadId, cancel);
+                    }
                 }
             }
         }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -45,7 +46,7 @@ namespace MStorage.WebStorage
         /// </summary>
         /// <param name="cancel">Allows cancellation of the list operation.</param>
         /// <returns>A collection of object names.</returns>
-        public abstract Task<IEnumerable<string>> ListAsync(CancellationToken cancel = default(CancellationToken));
+        public abstract IAsyncEnumerable<string> ListAsync(CancellationToken cancel = default(CancellationToken));
 
         /// <summary>
         /// Retrieve an object from the store. Throws FileNotFound if the object does not exist.
@@ -126,16 +127,16 @@ namespace MStorage.WebStorage
         /// <returns></returns>
         public virtual async Task DeleteAllAsync(IProgress<long> progress = null, CancellationToken cancel = default(CancellationToken))
         {
-            var items = await ListAsync(cancel);
+            var items = ListAsync(cancel);
             long count = 0;
-            foreach (var item in items)
+            await foreach(var item in items)
             {
                 if (cancel.IsCancellationRequested) { return; }
 
                 await DeleteAsync(item, cancel);
 
                 count++;
-                if (progress != null) { progress.Report(count); }
+                progress?.Report(count);
             }
         }
 
@@ -155,24 +156,19 @@ namespace MStorage.WebStorage
                 return;
             }
 
-            var items = await ListAsync();
-            foreach (var item in items)
+            var items = ListAsync();
+            await foreach(var item in items)
             {
                 if (cancel.IsCancellationRequested) { return; }
 
                 try
                 {
-                    using (var s = await DownloadAsync(item))
-                    {
-                        await destination.UploadAsync(item, s, false, null, cancel);
-                    }
+                    using var s = await DownloadAsync(item);
+                    await destination.UploadAsync(item, s, false, null, cancel);
                 }
                 catch (Exception ex)
                 {
-                    if (error != null)
-                    {
-                        error.Report(new ExceptionWithValue<string>(item, ex));
-                    }
+                    error?.Report(new ExceptionWithValue<string>(item, ex));
                     continue;
                 }
 
@@ -188,10 +184,7 @@ namespace MStorage.WebStorage
                     }
                     catch (Exception ex)
                     {
-                        if (error != null)
-                        {
-                            error.Report(new ExceptionWithValue<string>(item, ex));
-                        }
+                        error?.Report(new ExceptionWithValue<string>(item, ex));
                         continue;
                     }
                 }

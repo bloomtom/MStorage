@@ -31,7 +31,7 @@ namespace MStorage
         /// </summary>
         /// <param name="cancel">Allows cancellation of the list operation.</param>
         /// <returns>A collection of object names.</returns>
-        Task<IEnumerable<string>> ListAsync(CancellationToken cancel = default(CancellationToken));
+        IAsyncEnumerable<string> ListAsync(CancellationToken cancel = default(CancellationToken));
 
         /// <summary>
         /// Transfers every object from this instance to another IStorage instance.

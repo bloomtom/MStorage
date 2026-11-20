@@ -12,7 +12,7 @@ namespace MStorageTests
     {
         private static IStorage GenerateBackend()
         {
-            return new MStorage.WebStorage.S3Storage(AwsConnectionInfo.accessKey, AwsConnectionInfo.apiKey, AwsConnectionInfo.bucket, null, AwsConnectionInfo.endpoint);
+            return new MStorage.WebStorage.S3Storage(AwsConnectionInfo.accessKey, AwsConnectionInfo.apiKey, AwsConnectionInfo.endpoint, AwsConnectionInfo.bucket);
         }
 
         [TestMethod]

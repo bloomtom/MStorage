@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -110,11 +110,17 @@ namespace MStorage
         /// </summary>
         /// <param name="cancel">Allows cancellation of the list operation.</param>
         /// <returns>A collection of object names, or null if canceled.</returns>
-        public Task<IEnumerable<string>> ListAsync(CancellationToken cancel = default(CancellationToken))
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+        public async IAsyncEnumerable<string> ListAsync([EnumeratorCancellation] CancellationToken cancel = default(CancellationToken))
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
-            if (cancel.IsCancellationRequested) { return Task.FromCanceled<IEnumerable<string>>(cancel); }
-
-            return Task.FromResult<IEnumerable<string>>(stored.Keys);
+            cancel.ThrowIfCancellationRequested();
+;
+            foreach (var key in stored.Keys)
+            {
+                cancel.ThrowIfCancellationRequested();
+                yield return key;
+            }
         }
 
         /// <summary>
